@@ -8,11 +8,12 @@ Este repositório contém o desenvolvimento de um **interpretador da linguagem C
 ```
 InterpretadorC/
 ├── src
-│   ├── interpretadorC.l
-│   └── interpretadorC.y   
+│   ├── lexerC.l
+│   └── parserC.y   
 ├── docs
 │   └── grammar.md
 ├── testes
 │   └── overview.md
+├── makefile
 └── README.md
 ```
