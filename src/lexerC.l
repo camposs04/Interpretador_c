@@ -34,6 +34,9 @@
 "{"         { printf("Abre_Chaves\n");}
 "}"         { printf("Fecha_Chaves\n");}
 
+"'"         { return ASPASSIMPLES;}
+
+
 [0-9]+"."[0-9]+ { return NUM;}
 [0-9]+          { return NUM;}
 
