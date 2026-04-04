@@ -17,11 +17,30 @@ void yyerror(const char *s);
 %token PLUS MINUS MULT DIV
 %%
 
+
+programa:
+    lista
+;
+
+lista:
+    lista elemento
+    | elemento
+;
+
+elemento:
+    declaracao
+    | atribuicao
+    | comando
+;
+
+
 declaracao:
     INT ID PONTO_VIRGULA
     | FLOAT ID PONTO_VIRGULA
     | CHAR ID PONTO_VIRGULA
     ;
+
+    
 atribuicao:
     INT ID EQUAL NUM PONTO_VIRGULA
     | FLOAT ID EQUAL NUM PONTO_VIRGULA
