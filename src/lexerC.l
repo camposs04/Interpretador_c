@@ -12,8 +12,25 @@
 "int"       { return INT;}
 "float"     { return FLOAT;}
 "char"      { return CHAR;}
+"bool"      { return BOOL;}
 
 "for"       { return FOR;}
+"while"     { return WHILE;}
+"do"        { return DO;}
+"return"    { return RETURN;}
+"break"     { return BREAK;}
+"continue"  { return CONTINUE;}
+"switch"    { return SWITCH;}
+"case"      { return CASE;}
+"default"   { return DEFAULT;}
+"void"      { return VOID;}
+"printf"    { return PRINTF;}
+"scanf"     { return SCANF;}
+"include"   { return INCLUDE;}
+"stdio.h"   { return STDIO_H;}
+"stdlib.h"  { return STDLIB_H;}
+"main"      { return MAIN;}
+
 
 "=="        { printf("DEQ\n");}
 "!="        { printf("NEQ\n");}
@@ -27,6 +44,18 @@
 "-"         { return MINUS; }
 "*"         { return MULT; }
 "/"         { return DIV; }
+"%"         { return MOD; }
+"++"        { return INCREMENT;}
+"--"        { return DECREMENT;}
+"+="        { return ADD_EQUAL;}
+"-="        { return SUB_EQUAL;}
+"*="        { return MULT_EQUAL;}
+"/="        { return DIV_EQUAL;}
+"%="        { return MOD_EQUAL;}
+
+"!"         { return NOT;}
+"&"         { return AND;}
+"|"         { return OR;}
 
 ";"         { return PONTO_VIRGULA;}
 "("         { return OPEN_PAREN;}
