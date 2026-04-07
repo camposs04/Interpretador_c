@@ -71,7 +71,7 @@
 
 [a-zA-Z][a-zA-Z0-9]*  { return ID; }
 
-[ \t\n]      {}
+[ \t\n]+      {}
 
 
 .           { printf("DESCONHECIDO(%s)\n", yytext);}
