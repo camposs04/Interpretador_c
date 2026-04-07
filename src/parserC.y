@@ -17,7 +17,7 @@ void yyerror(const char *s);
 %token PLUS MINUS MULT DIV
 %token INCREMENT DECREMENT ADD_EQUAL SUB_EQUAL MULT_EQUAL DIV_EQUAL MOD_EQUAL
 %token AND OR NOT
-%token MOD
+%token MOD WHILE DO
 %token VOID MAIN
 %token PRINTF SCANF INCLUDE STDIO_H STDLIB_H MATH_H
 %token SWITCH CASE DEFAULT
@@ -25,6 +25,7 @@ void yyerror(const char *s);
 %token BOOL
 
 
+%%
 programa:
     lista
 ;
