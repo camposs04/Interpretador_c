@@ -15,21 +15,11 @@
 "bool"      { return BOOL;}
 
 "for"       { return FOR;}
-"while"     { return WHILE;}
-"do"        { return DO;}
 "return"    { return RETURN;}
 "break"     { return BREAK;}
-"continue"  { return CONTINUE;}
-"switch"    { return SWITCH;}
-"case"      { return CASE;}
-"default"   { return DEFAULT;}
 "void"      { return VOID;}
 "printf"    { return PRINTF;}
 "scanf"     { return SCANF;}
-"include"   { return INCLUDE;}
-"stdio.h"   { return STDIO_H;}
-"stdlib.h"  { return STDLIB_H;}
-"main"      { return MAIN;}
 
 
 "=="        { printf("DEQ\n");}
@@ -54,15 +44,15 @@
 "%="        { return MOD_EQUAL;}
 
 "!"         { return NOT;}
-"&"         { return AND;}
-"|"         { return OR;}
+"&&"        { return AND;}
+"||"        { return OR;}
 
 ";"         { return PONTO_VIRGULA;}
 "("         { return OPEN_PAREN;}
 ")"         { return CLOSE_PAREN;}
-"{"         { printf("Abre_Chaves\n");}
-"}"         { printf("Fecha_Chaves\n");}
-
+"{"         { return ABRE_CHAVES;}
+"}"         { return FECHA_CHAVES;}
+","         { return VIRGULA;}
 "'"         { return ASPASSIMPLES;}
 
 
