@@ -9,8 +9,14 @@ void yyerror(const char *s);
 
 %}
 
+%union{
+    int intValue;
+}
+
+%token <intValue> NUM
+
+
 %token IF ELSE INT ID FLOAT CHAR FOR
-%token NUM
 %token EQUAL ASPASSIMPLES
 %token OPEN_PAREN CLOSE_PAREN ABRE_CHAVES FECHA_CHAVES
 %token PONTO_VIRGULA VIRGULA
@@ -22,6 +28,11 @@ void yyerror(const char *s);
 %token PRINTF SCANF
 %token RETURN
 %token BOOL
+
+%left PLUS MINUS
+%left MULT DIV
+
+%type <intValue> expressao
 
 
 %%
@@ -56,14 +67,18 @@ atribuicao:
 
 
 comando:
-    IF OPEN_PAREN expressao CLOSE_PAREN comando
+    expressao PONTO_VIRGULA { printf("%d\n", $1); }
+    | IF OPEN_PAREN expressao CLOSE_PAREN comando
     | ID EQUAL expressao PONTO_VIRGULA
     ;
 
 expressao:
-    expressao PLUS expressao
-    | NUM
-    | ID
+      expressao PLUS expressao          { $$ = $1 + $3; }
+    | expressao MINUS expressao         { $$ = $1 - $3; }
+    | expressao MULT expressao          { $$ = $1 * $3; }
+    | expressao DIV expressao           { $$ = $1 / $3; }
+    | OPEN_PAREN expressao CLOSE_PAREN  { $$ = $2; }
+    | NUM                               { $$ = $1; }
     ;
 
 %% 
