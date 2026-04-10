@@ -13,9 +13,12 @@ InterpretadorC/
 ├── docs
 │   ├── grammar.md
 │   ├── lexer.md
+│   ├── scope.md
 │   └── semantic.md
 ├── testes
-│   └── overview.md
+│   ├── overview.md
+│   ├── testeDeclaracoes.C
+│   └── testeExpressaoInt.c
 ├── makefile
 └── README.md
 ```

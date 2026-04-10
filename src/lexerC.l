@@ -57,7 +57,12 @@
 
 
 [0-9]+"."[0-9]+ { return NUM;}
-[0-9]+          { return NUM;}
+
+[0-9]+ {
+    yylval.intValue = atoi(yytext);
+    return NUM;
+}
+
 
 [a-zA-Z][a-zA-Z0-9]*  { return ID; }
 
