@@ -49,19 +49,24 @@ elemento:
     declaracao
     | atribuicao
     | comando
+    | ABRE_CHAVES lista FECHA_CHAVES
 ;
 
+lista_ids:
+    lista_ids VIRGULA ID
+    | ID
+;
 
 declaracao:
-    INT ID PONTO_VIRGULA
-    | FLOAT ID PONTO_VIRGULA
-    | CHAR ID PONTO_VIRGULA
+    INT lista_ids PONTO_VIRGULA
+    | FLOAT lista_ids PONTO_VIRGULA
+    | CHAR lista_ids PONTO_VIRGULA
     ;
 
     
 atribuicao:
-    INT ID EQUAL NUM PONTO_VIRGULA
-    | FLOAT ID EQUAL NUM PONTO_VIRGULA
+    INT ID EQUAL expressao PONTO_VIRGULA
+    | FLOAT ID EQUAL expressao PONTO_VIRGULA
     | CHAR ID EQUAL ASPASSIMPLES ID ASPASSIMPLES PONTO_VIRGULA
     ;
 
@@ -79,6 +84,7 @@ expressao:
     | expressao DIV expressao           { $$ = $1 / $3; }
     | OPEN_PAREN expressao CLOSE_PAREN  { $$ = $2; }
     | NUM                               { $$ = $1; }
+    | ID                                {}
     ;
 
 %% 
