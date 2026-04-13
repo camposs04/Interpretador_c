@@ -49,7 +49,22 @@ elemento:
     declaracao
     | atribuicao
     | comando
-    | ABRE_CHAVES lista FECHA_CHAVES
+    | bloco
+    | if_regras
+
+;
+
+bloco:
+    ABRE_CHAVES lista FECHA_CHAVES
+;
+
+if_regras:
+    IF OPEN_PAREN expressao CLOSE_PAREN corpo_if
+;
+
+corpo_if:
+    bloco
+    | elemento
 ;
 
 lista_ids:
@@ -73,7 +88,6 @@ atribuicao:
 
 comando:
     expressao PONTO_VIRGULA { printf("%d\n", $1); }
-    | IF OPEN_PAREN expressao CLOSE_PAREN comando
     | ID EQUAL expressao PONTO_VIRGULA
     ;
 
