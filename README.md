@@ -20,6 +20,7 @@ InterpretadorC/
 │   ├── testeDeclaracoes.C
 │   └── testeExpressaoInt.c
 ├── makefile
+├── .gitignore
 └── README.md
 ```
 
