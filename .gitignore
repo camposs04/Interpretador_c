@@ -1,0 +1,4 @@
+lex.yy.c
+parserC.tab.c
+parserC.tab.h
+programa
