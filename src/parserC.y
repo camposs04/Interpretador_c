@@ -3,7 +3,6 @@
 
 int yylex(void);
 void yyerror(const char *s);
-
 %}
 
 %union{
@@ -11,7 +10,6 @@ void yyerror(const char *s);
 }
 
 %token <intValue> NUM
-
 
 %token IF ELSE INT ID FLOAT CHAR FOR WHILE
 %token EQUAL ASPASSIMPLES
@@ -31,8 +29,8 @@ void yyerror(const char *s);
 
 %type <intValue> expressao
 
-
 %%
+
 programa:
     comandos
 ;
@@ -40,20 +38,20 @@ programa:
 comandos:
     comandos comando
     | comando
-    ;
+;
 
 comando:
     declaracao
     | atribuicao
     | desvio
-    | expressao PONTO_VIRGULA 
+    | expressao PONTO_VIRGULA   { printf("Resultado: %d\n", $1); }
     | bloco
     | PRINTF OPEN_PAREN ID CLOSE_PAREN PONTO_VIRGULA
 ;
 
 
 bloco:
-    ABRE_CHAVES lista FECHA_CHAVES
+    ABRE_CHAVES comandos FECHA_CHAVES  
 ;
 
 lista_ids:
@@ -65,12 +63,10 @@ declaracao:
     INT lista_ids PONTO_VIRGULA
     | FLOAT lista_ids PONTO_VIRGULA
     | CHAR lista_ids PONTO_VIRGULA
-    ;
+;
 
-    
 atribuicao:
     ID EQUAL expressao PONTO_VIRGULA
-
 ;
 
 desvio:
@@ -84,8 +80,8 @@ expressao:
     | expressao DIV expressao           { $$ = $1 / $3; }
     | OPEN_PAREN expressao CLOSE_PAREN  { $$ = $2; }
     | NUM                               { $$ = $1; }
-    | ID                                {}
-    ;
+    | ID                                { $$ = 0; } 
+;
 
 %% 
 
