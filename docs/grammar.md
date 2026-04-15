@@ -142,3 +142,24 @@ void yyerror(const char *s) {
 }
 ```
 
+## 11. Regras de Gramática e Precedência
+
+Para garantir que expressões matemáticas sejam calculadas na ordem correta, a gramática define níveis de prioridade para os operadores. Operadores com maior precedência são "agrupados" antes dos de menor precedência.
+
+| Operador | Descrição | Precedência | Associatividade |
+| ---------- | ---------- | ---------- | ---------- |
+| `*`, `/`, `%` | Multiplicação, Divisão e Módulo | Alta | Esquerda |
+| `+`, `-` | Soma e Subtração | Baixa | Esquerda |
+
+### Associatividade à Esquerda
+
+A gramática utiliza **associatividade à esquerda** para operadores de mesma precedência. Isso significa que cálculos em sequência são resolvidos da esquerda para a direita.
+- **Exemplo:** A expressão `10 - 5 - 2` é interpretada pelo parser como `(10 - 5) - 2`, resultando em `3`, e não como `10 - (5 - 2)`.
+
+## Detalhamento Técnico
+
+O interpretador utiliza o algoritmo **LALR (Look-Ahead Left-to-Right)**, gerado pelo Bison. Este método é o padrão para linguagens de programação modernas por combinar dois fatores críticos:
+
+1. **Eficiência de Memória**: Utiliza tabelas de estados reduzidas em comparação ao LR(1) canônico, mantendo o compilador leve.
+
+2. **Poder de Antecipação (Look-Ahead):** O parser consegue "olhar" o próximo token da entrada para decidir qual regra da gramática aplicar, o que ajuda a evitar ambiguidades (conflitos) e permite processar gramáticas complexas de forma determinística.
