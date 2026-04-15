@@ -1,11 +1,8 @@
 %{
 #include <stdio.h>
 
-
 int yylex(void);
 void yyerror(const char *s);
-
-
 
 %}
 
@@ -37,39 +34,31 @@ void yyerror(const char *s);
 
 %%
 programa:
-    lista
+    comandos
 ;
 
-lista:
-    lista elemento
-    | elemento
-;
+comandos:
+    comandos comando
+    | comando
+    ;
 
-elemento:
+comando:
     declaracao
     | atribuicao
-    | comando
+    | desvio
+    | expressao PONTO_VIRGULA 
     | bloco
-    | if_regras
-
+    | PRINTF OPEN_PAREN ID CLOSE_PAREN PONTO_VIRGULA
 ;
+
 
 bloco:
     ABRE_CHAVES lista FECHA_CHAVES
 ;
 
-if_regras:
-    IF OPEN_PAREN expressao CLOSE_PAREN corpo_if
-;
-
-corpo_if:
-    bloco
-    | elemento
-;
-
 lista_ids:
-    lista_ids VIRGULA ID
-    | ID
+    ID
+    | lista_ids VIRGULA ID
 ;
 
 declaracao:
@@ -80,19 +69,16 @@ declaracao:
 
     
 atribuicao:
-    INT ID EQUAL expressao PONTO_VIRGULA
-    | FLOAT ID EQUAL expressao PONTO_VIRGULA
-    | CHAR ID EQUAL ASPASSIMPLES ID ASPASSIMPLES PONTO_VIRGULA
-    ;
+    ID EQUAL expressao PONTO_VIRGULA
 
+;
 
-comando:
-    expressao PONTO_VIRGULA { printf("%d\n", $1); }
-    | ID EQUAL expressao PONTO_VIRGULA
-    ;
+desvio:
+    IF OPEN_PAREN expressao CLOSE_PAREN comando
+;
 
 expressao:
-      expressao PLUS expressao          { $$ = $1 + $3; }
+    expressao PLUS expressao            { $$ = $1 + $3; }
     | expressao MINUS expressao         { $$ = $1 - $3; }
     | expressao MULT expressao          { $$ = $1 * $3; }
     | expressao DIV expressao           { $$ = $1 / $3; }
