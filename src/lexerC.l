@@ -56,11 +56,14 @@
 "'"         { return ASPASSIMPLES;}
 
 
-[0-9]+"."[0-9]+ { return NUM;}
+([0-9]+\.[0-9]*|\.[0-9]+) {             // Captura valores ponto flutuante
+    yylval.floatValue = atof(yytext);   // floatValue tipo float
+    return FLOAT_NUM;
+}
 
 [0-9]+ {
     yylval.intValue = atoi(yytext);
-    return NUM;
+    return INT_NUM;
 }
 
 
