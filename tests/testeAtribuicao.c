@@ -1,7 +1,5 @@
-int a = 10;
-int b = 5;
-float x = 2.5;
-char c = 'A';
+a = 10;
+b = 5;
 
 a = 20;
 b = 15;
@@ -19,9 +17,7 @@ a = a + b;
 
 x = a + 2.5;
 a = x;        
-c = 'B';
 
-int d = 0;
 d = a + b + 10;
 a = d - b;
 x = d * 1.5;

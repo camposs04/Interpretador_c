@@ -1,19 +1,31 @@
 %{
 #include <stdio.h>
+#include <stdlib.h>
+#include "ast.h"
 
 int yylex(void);
 void yyerror(const char *s);
+NoAST *root = NULL;
 %}
 
+%code requires {
+    #include "ast.h"
+}
 %union{
     int intValue;       
     float floatValue;
+    char *id;
+    NoAST *ast;
 }
 
 %token <intValue> INT_NUM
 %token <floatValue> FLOAT_NUM
+%token <intValue> CHAR_NUM
+%type <intValue> tipo
 
-%token IF ELSE INT ID FLOAT CHAR FOR
+%token <id> ID
+
+%token IF ELSE INT FLOAT CHAR FOR
 %token EQUAL ASPASSIMPLES
 %token OPEN_PAREN CLOSE_PAREN ABRE_CHAVES FECHA_CHAVES
 %token PONTO_VIRGULA VIRGULA
@@ -29,25 +41,33 @@ void yyerror(const char *s);
 %left PLUS MINUS
 %left MULT DIV
 
-%type <intValue> expressao    
-%type <floatValue> expressao_f
+%type <ast> expressao    
+%type <ast> lista elemento
+%type <ast> comando
+%type <ast> atribuicao
+%type <ast> declaracao
+%type <ast> comandos
 
 %%
 
 programa:
-    lista
+    lista {
+        root = $1;
+        printf("\nAST do programa:\n");
+        imprimirAST(root);
+        printf("\n");
+    }
 ;
 
 lista:
-    lista elemento
-    | elemento
+    lista elemento { $$ = criarNoSeq($1, $2); }
+    | elemento     { $$ = $1; }
 ;
 
 elemento:
-    declaracao
+    comando
     | atribuicao
-    | comando
-    | bloco
+    | declaracao
 ;
 
 bloco:
@@ -56,52 +76,45 @@ bloco:
 
 
 comandos:
-    comandos comando
-    | comando
+    comandos comando { $$ = criarNoSeq($1, $2); }
+    | comando { $$ = $1; }
 ;
-
 
 comando:
-    expressao PONTO_VIRGULA       { printf("%d\n", $1); }
-    | expressao_f PONTO_VIRGULA   { printf("%f\n", $1); }
-    | IF OPEN_PAREN expressao CLOSE_PAREN comando
-    | IF OPEN_PAREN expressao_f CLOSE_PAREN comando
-    | ID EQUAL expressao PONTO_VIRGULA
-    | ID EQUAL expressao_f PONTO_VIRGULA
+    expressao PONTO_VIRGULA { $$ = $1; }
 ;
 
+tipo:
+    INT   { $$ = T_INT; }
+    | FLOAT { $$ = T_FLOAT; }
+    | CHAR  { $$ = T_CHAR; }
+    | BOOL  { $$ = T_BOOL; }
+;
 
 declaracao:
-    INT ID PONTO_VIRGULA
-    | FLOAT ID PONTO_VIRGULA
-    | CHAR ID PONTO_VIRGULA
+    tipo ID PONTO_VIRGULA {
+        $$ = criarNoDecl($1, $2, NULL);
+    }
+    | tipo ID EQUAL expressao PONTO_VIRGULA {
+        $$ = criarNoDecl($1, $2, $4);
+    }
 ;
-
 
 atribuicao:
-    INT ID EQUAL expressao PONTO_VIRGULA
-    | FLOAT ID EQUAL expressao_f PONTO_VIRGULA 
-    | CHAR ID EQUAL ASPASSIMPLES ID ASPASSIMPLES PONTO_VIRGULA
+    ID EQUAL expressao PONTO_VIRGULA { $$ = criarNoAtrib($1, $3); }
+    
 ;
-
 
 expressao:
-    expressao PLUS expressao   { $$ = $1 + $3; }
-    | expressao MINUS expressao { $$ = $1 - $3; }
-    | expressao MULT expressao { $$ = $1 * $3; }
-    | expressao DIV expressao { $$ = $1 / $3; }
+    expressao PLUS expressao   { $$ = criarNoOp('+', $1, $3); }
+    | expressao MINUS expressao { $$ = criarNoOp('-', $1, $3); }
+    | expressao MULT expressao { $$ = criarNoOp('*', $1, $3); }
+    | expressao DIV expressao { $$ = criarNoOp('/', $1, $3); }
     | OPEN_PAREN expressao CLOSE_PAREN { $$ = $2; }
-    | INT_NUM { $$ = $1; }
-;
-
-
-expressao_f:
-    expressao_f PLUS expressao_f   { $$ = $1 + $3; }
-    | expressao_f MINUS expressao_f { $$ = $1 - $3; }
-    | expressao_f MULT expressao_f { $$ = $1 * $3; }
-    | expressao_f DIV expressao_f { $$ = $1 / $3; }
-    | OPEN_PAREN expressao_f CLOSE_PAREN { $$ = $2; }
-    | FLOAT_NUM { $$ = $1; }
+    | INT_NUM { $$ = criarNoInt($1); }
+    | FLOAT_NUM { $$ = criarNoFloat($1); }
+    | CHAR_NUM { $$ = criarNoChar($1); }
+    | ID { $$ = criarNoId($1); }
 ;
 
 %%
