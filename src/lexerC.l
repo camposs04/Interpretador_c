@@ -67,7 +67,10 @@
 }
 
 
-[a-zA-Z][a-zA-Z0-9]*  { return ID; }
+[a-zA-Z][a-zA-Z0-9]*  { yylval.id = strdup(yytext); return ID; }
+
+\'[a-zA-Z]\' { yylval.intValue = yytext[1]; return CHAR_NUM; }
+
 
 [ \t\n]+      {}
 
