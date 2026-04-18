@@ -55,12 +55,12 @@ int posLinha = 0;
 "scanf"     { coluna += yyleng; return SCANF;}
 
 
-"=="        { printf("DEQ\n");}
-"!="        { printf("NEQ\n");}
-"<="        { printf("LE\n");}
-">="        { printf("GE\n");}
-"<"         { printf("LT\n");}
-">"         { printf("GT\n");}
+"=="        { coluna += yyleng; return DEQ;}
+"!="        { coluna += yyleng; return NEQ;}
+"<="        { coluna += yyleng; return LE;}
+">="        { coluna += yyleng; return GE;}
+"<"         { coluna += yyleng; return LT;}
+">"         { coluna += yyleng; return GT;}
 "="         { ADD_TEXTO(); coluna += yyleng; return EQUAL;}
 
 "+"         { coluna += yyleng; return PLUS; }

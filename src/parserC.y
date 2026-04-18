@@ -45,7 +45,10 @@ extern char *yytext;
 %token PRINTF SCANF
 %token RETURN
 %token BOOL
+%token DEQ NEQ LE GE LT GT
 
+%left DEQ NEQ
+%left LT GT LE GE
 %left PLUS MINUS
 %left MULT DIV
 
@@ -56,6 +59,7 @@ extern char *yytext;
 %type <ast> declaracao
 %type <ast> comandos
 %type <ast> bloco
+%type <ast> lista_ids
 
 %%
 
@@ -93,6 +97,12 @@ comando:
     | declaracao           { $$ = $1; }
     | bloco                { $$ = $1; }
     | error PONTO_VIRGULA  { yyerrok; yyclearin; $$ = NULL; }
+    | IF OPEN_PAREN expressao CLOSE_PAREN bloco {
+        $$ = criarNoIf($3, $5, NULL);
+    }
+    | IF OPEN_PAREN expressao CLOSE_PAREN bloco ELSE bloco {
+        $$ = criarNoIf($3, $5, $7);
+    }
 ;
 
 tipo:
@@ -103,21 +113,38 @@ tipo:
 ;
 
 declaracao:
-    tipo ID PONTO_VIRGULA {
-        $$ = criarNoDecl($1, $2, NULL);
-    }
-    | tipo ID EQUAL expressao PONTO_VIRGULA {
-        $$ = criarNoDecl($1, $2, $4);
-    }
-    | tipo ID EQUAL error PONTO_VIRGULA {
-        yyerrok;
-        $$ = criarNoDecl($1, $2, NULL); 
-    }
-    | tipo ID error PONTO_VIRGULA {
-        yyerrok;
-        $$ = criarNoDecl($1, $2, NULL);
+    tipo lista_ids PONTO_VIRGULA {
+        $$ = $2; 
+        NoAST *aux = $$;
+        while (aux != NULL) {
+            if (aux->operador == ';') { 
+                if (aux->esquerda) aux->esquerda->tipo = $1;
+                aux = aux->direita;
+            } else { 
+                aux->tipo = $1;
+                break;
+            }
+        }
     }
 ;
+
+lista_ids:
+    ID { 
+        $$ = criarNoDecl(T_INT, $1, NULL); 
+    }
+    | ID EQUAL expressao {
+        $$ = criarNoDecl(T_INT, $1, $3);
+    }
+    | lista_ids VIRGULA ID {
+        NoAST *novo = criarNoDecl(T_INT, $3, NULL);
+        $$ = criarNoSeq($1, novo);
+    }
+    | lista_ids VIRGULA ID EQUAL expressao {
+        NoAST *novo = criarNoDecl(T_INT, $3, $5);
+        $$ = criarNoSeq($1, novo);
+    }
+;
+
 
 atribuicao:
     ID EQUAL expressao PONTO_VIRGULA { 
@@ -130,10 +157,16 @@ atribuicao:
 ;
 
 expressao:
-    expressao PLUS expressao   { $$ = criarNoOp('+', $1, $3); }
+    expressao PLUS expressao    { $$ = criarNoOp('+', $1, $3); }
     | expressao MINUS expressao { $$ = criarNoOp('-', $1, $3); }
-    | expressao MULT expressao { $$ = criarNoOp('*', $1, $3); }
-    | expressao DIV expressao { $$ = criarNoOp('/', $1, $3); }
+    | expressao MULT expressao  { $$ = criarNoOp('*', $1, $3); }
+    | expressao DIV expressao   { $$ = criarNoOp('/', $1, $3); }
+    | expressao DEQ expressao   { $$ = criarNoOp('e', $1, $3); } 
+    | expressao NEQ expressao   { $$ = criarNoOp('!', $1, $3); } 
+    | expressao LT expressao    { $$ = criarNoOp('<', $1, $3); } 
+    | expressao GT expressao    { $$ = criarNoOp('>', $1, $3); }
+    | expressao LE expressao    { $$ = criarNoOp('L', $1, $3); } 
+    | expressao GE expressao    { $$ = criarNoOp('G', $1, $3); } 
     | OPEN_PAREN expressao CLOSE_PAREN { $$ = $2; }
     | INT_NUM { $$ = criarNoInt($1); }
     | FLOAT_NUM { $$ = criarNoFloat($1); }
