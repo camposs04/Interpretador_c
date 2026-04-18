@@ -45,7 +45,10 @@ extern char *yytext;
 %token PRINTF SCANF
 %token RETURN
 %token BOOL
+%token DEQ NEQ LE GE LT GT
 
+%left DEQ NEQ
+%left LT GT LE GE
 %left PLUS MINUS
 %left MULT DIV
 
@@ -154,10 +157,16 @@ atribuicao:
 ;
 
 expressao:
-    expressao PLUS expressao   { $$ = criarNoOp('+', $1, $3); }
+    expressao PLUS expressao    { $$ = criarNoOp('+', $1, $3); }
     | expressao MINUS expressao { $$ = criarNoOp('-', $1, $3); }
-    | expressao MULT expressao { $$ = criarNoOp('*', $1, $3); }
-    | expressao DIV expressao { $$ = criarNoOp('/', $1, $3); }
+    | expressao MULT expressao  { $$ = criarNoOp('*', $1, $3); }
+    | expressao DIV expressao   { $$ = criarNoOp('/', $1, $3); }
+    | expressao DEQ expressao   { $$ = criarNoOp('e', $1, $3); } 
+    | expressao NEQ expressao   { $$ = criarNoOp('!', $1, $3); } 
+    | expressao LT expressao    { $$ = criarNoOp('<', $1, $3); } 
+    | expressao GT expressao    { $$ = criarNoOp('>', $1, $3); }
+    | expressao LE expressao    { $$ = criarNoOp('L', $1, $3); } 
+    | expressao GE expressao    { $$ = criarNoOp('G', $1, $3); } 
     | OPEN_PAREN expressao CLOSE_PAREN { $$ = $2; }
     | INT_NUM { $$ = criarNoInt($1); }
     | FLOAT_NUM { $$ = criarNoFloat($1); }

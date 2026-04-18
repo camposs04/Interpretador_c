@@ -114,12 +114,21 @@ void imprimirAST(NoAST *raiz) {
         default:
             printf("(");
             imprimirAST(raiz->esquerda);
-            printf(" %c ", raiz->operador);
+            
+            switch (raiz->operador) {
+                case 'e': printf(" == "); break;
+                case '!': printf(" != "); break;
+                case 'L': printf(" <= "); break;
+                case 'G': printf(" >= "); break;
+                default:  printf(" %c ", raiz->operador); break;
+            }
+            
             imprimirAST(raiz->direita);
             printf(")");
             break;
     }
 }
+
 NoAST *criarNoSeq(NoAST *esq, NoAST *dir) {
     NoAST *novo = malloc(sizeof(NoAST));
     novo->operador = ';';
