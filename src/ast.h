@@ -12,4 +12,6 @@ NoAST *criarNoSeq(NoAST *esq, NoAST *dir);
 NoAST *criarNoAtrib(char *nome, NoAST *valor);
 NoAST *criarNoChar(char valor);
 NoAST *criarNoDecl(Tipo tipo, char *nome, NoAST *valor);
+NoAST *criarNoIf(NoAST *condicao, NoAST *blocoTrue, NoAST *blocoFalse);
+
 #endif

@@ -72,14 +72,12 @@ void imprimirAST(NoAST *raiz) {
             break;
 
         case 'd':
-            switch (raiz->tipo) {
-                case T_INT:   printf("int "); break;
-                case T_FLOAT: printf("float "); break;
-                case T_CHAR:  printf("char "); break;
-                case T_BOOL:  printf("bool "); break;
-            }
+            if (raiz->tipo == T_INT)   printf("int ");
+            else if (raiz->tipo == T_FLOAT) printf("float ");
+            else if (raiz->tipo == T_CHAR)  printf("char ");
+            else if (raiz->tipo == T_BOOL)  printf("bool ");
 
-            imprimirAST(raiz->esquerda);
+            imprimirAST(raiz->esquerda); 
 
             if (raiz->direita != NULL) {
                 printf(" = ");
@@ -98,6 +96,19 @@ void imprimirAST(NoAST *raiz) {
             imprimirAST(raiz->esquerda);
             printf(";\n");
             imprimirAST(raiz->direita);
+            break;
+        
+        case 'f':
+            printf("if (");
+            imprimirAST(raiz->esquerda); 
+            printf(") {\n");
+            imprimirAST(raiz->direita->esquerda); 
+            printf("\n}");
+            if (raiz->direita->direita != NULL) {
+                printf(" else {\n");
+                imprimirAST(raiz->direita->direita); 
+                printf("\n}");
+            }
             break;
 
         default:
@@ -151,5 +162,19 @@ NoAST *criarNoDecl(Tipo tipo, char *nome, NoAST *valor) {
     novo->esquerda = id;
     novo->direita = valor;
 
+    return novo;
+}
+
+NoAST *criarNoIf(NoAST *condicao, NoAST *blocoTrue, NoAST *blocoFalse) {
+    NoAST *novo = malloc(sizeof(NoAST));
+    novo->operador = 'f'; 
+    novo->esquerda = condicao;
+    
+    NoAST *corpo = malloc(sizeof(NoAST));
+    corpo->operador = 'c'; 
+    corpo->esquerda = blocoTrue;
+    corpo->direita = blocoFalse;
+    
+    novo->direita = corpo;
     return novo;
 }
