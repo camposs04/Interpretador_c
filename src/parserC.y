@@ -2,11 +2,19 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "ast.h"
+#include <string.h>
 
 int yylex(void);
 void yyerror(const char *s);
 NoAST *root = NULL;
+
+extern int linha;
+extern int coluna;
+extern char linhaAtual[1024];
+extern char *yytext;
 %}
+
+%define parse.error simple
 
 %code requires {
     #include "ast.h"
@@ -47,6 +55,7 @@ NoAST *root = NULL;
 %type <ast> atribuicao
 %type <ast> declaracao
 %type <ast> comandos
+%type <ast> bloco
 
 %%
 
@@ -66,12 +75,10 @@ lista:
 
 elemento:
     comando
-    | atribuicao
-    | declaracao
 ;
 
 bloco:
-    ABRE_CHAVES comandos FECHA_CHAVES
+    ABRE_CHAVES comandos FECHA_CHAVES { $$ = $2; }
 ;
 
 
@@ -82,6 +89,10 @@ comandos:
 
 comando:
     expressao PONTO_VIRGULA { $$ = $1; }
+    | atribuicao           { $$ = $1; }
+    | declaracao           { $$ = $1; }
+    | bloco                { $$ = $1; }
+    | error PONTO_VIRGULA  { yyerrok; yyclearin; $$ = NULL; }
 ;
 
 tipo:
@@ -98,11 +109,24 @@ declaracao:
     | tipo ID EQUAL expressao PONTO_VIRGULA {
         $$ = criarNoDecl($1, $2, $4);
     }
+    | tipo ID EQUAL error PONTO_VIRGULA {
+        yyerrok;
+        $$ = criarNoDecl($1, $2, NULL); 
+    }
+    | tipo ID error PONTO_VIRGULA {
+        yyerrok;
+        $$ = criarNoDecl($1, $2, NULL);
+    }
 ;
 
 atribuicao:
-    ID EQUAL expressao PONTO_VIRGULA { $$ = criarNoAtrib($1, $3); }
-    
+    ID EQUAL expressao PONTO_VIRGULA { 
+        $$ = criarNoAtrib($1, $3); 
+    }
+    | ID EQUAL error PONTO_VIRGULA {
+        yyerrok;
+        $$ = NULL; 
+    }
 ;
 
 expressao:
@@ -124,5 +148,13 @@ int main(){
 }
 
 void yyerror(const char *s){
-    printf("Erro sintatico: %s\n", s);
+    (void)s; 
+
+    printf("ERROR PARSER\n");
+    printf("Line: %d Column: %d | error: unexpected token: '%s'\n", linha, coluna, yytext);
+
+    printf("    %s\n", linhaAtual);
+    printf("    ");
+    for (int i = 1; i < coluna; i++) printf(" ");
+    printf("^\n\n");
 }
