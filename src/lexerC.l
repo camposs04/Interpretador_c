@@ -27,6 +27,12 @@ int posLinha = 0;
     posLinha = 0;
 }
 
+"//".* { 
+    ADD_TEXTO(); 
+    coluna += yyleng; 
+}
+
+
 [ \t]+ {
     ADD_TEXTO();
     coluna += yyleng;
