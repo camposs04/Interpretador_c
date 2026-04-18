@@ -9,7 +9,10 @@ Este repositório contém o desenvolvimento de um **interpretador da linguagem C
 InterpretadorC/
 ├── src
 │   ├── lexerC.l
-│   └── parserC.y   
+│   ├── parserC.y
+│   ├── ast.c
+│   ├── ast.h
+│   └── tipos.h  
 ├── docs
 │   ├── grammar.md
 │   ├── lexer.md
@@ -18,6 +21,8 @@ InterpretadorC/
 ├── testes
 │   ├── overview.md
 │   ├── testeDeclaracoes.C
+│   ├── testeErros.c
+│   ├── testeEscopo.c
 │   └── testeExpressaoInt.c
 ├── makefile
 ├── .gitignore
