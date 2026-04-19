@@ -2,13 +2,27 @@
 
 ## 1. Visão Geral
 
-Este arquivo define a documentação da gramática livre de contexto da linguagem utilizando Bison.
+Este módulo define a **gramática da linguagem** utilizando o gerador de parser **Bison**.
 
-Sua função é validar a estrutura sintática do programa com base nas regras definidas.
+O parser é responsável por:
+
+* Validar a estrutura sintática do programa
+* Construir uma **Árvore Sintática Abstrata (AST)**
+* Tratar erros sintáticos com indicação de linha e coluna
+
+A gramática implementa um subconjunto da linguagem C com foco em:
+
+* Declarações
+* Atribuições
+* Expressões
+* Estruturas condicionais (`if / else`)
+* Blocos `{}`
 
 ---
 
-## 2. Ponto de Entrada
+## 2. Estrutura Geral do Programa
+
+### Regra principal
 
 ```c
 programa:
@@ -16,13 +30,12 @@ programa:
 ;
 ```
 
-* Um programa é composto por uma lista de elementos
+* Um programa é composto por uma sequência de elementos
+* Ao final do parsing, a AST é impressa
 
 ---
 
-## 3. Estrutura do Programa
-
-### 3.1 Lista de Elementos
+## 3. Sequência de Instruções
 
 ```c
 lista:
@@ -31,47 +44,41 @@ lista:
 ;
 ```
 
-* Permite múltiplas instruções por meio de recursão à esquerda
+* Implementa múltiplas instruções
+* Utiliza recursão à esquerda
+* Internamente gera nós de sequência (`;`) na AST
 
 ---
 
-### 3.2 Elementos
+## 4. Elementos
 
 ```c
 elemento:
-    declaracao
-    | atribuicao
+    comando
+;
+```
+
+* Todo elemento do programa é tratado como comando
+
+---
+
+## 5. Blocos
+
+```c
+bloco:
+    ABRE_CHAVES comandos FECHA_CHAVES
+;
+```
+
+```c
+comandos:
+    comandos comando
     | comando
 ;
 ```
 
----
-
-## 4. Declarações
-
-```c
-declaracao:
-    INT ID PONTO_VIRGULA
-    | FLOAT ID PONTO_VIRGULA
-    | CHAR ID PONTO_VIRGULA
-;
-```
-
-* Declaração de variáveis sem inicialização
-
----
-
-## 5. Atribuições
-
-```c
-atribuicao:
-    INT ID EQUAL NUM PONTO_VIRGULA
-    | FLOAT ID EQUAL NUM PONTO_VIRGULA
-    | CHAR ID EQUAL ASPASSIMPLES ID ASPASSIMPLES PONTO_VIRGULA
-;
-```
-
-* Inicialização de variáveis no momento da declaração
+* Representam agrupamento de instruções
+* Não há escopo semântico ainda (apenas estrutura sintática)
 
 ---
 
@@ -80,20 +87,97 @@ atribuicao:
 ```c
 comando:
     expressao PONTO_VIRGULA
-    | IF OPEN_PAREN expressao CLOSE_PAREN comando
-    | ID EQUAL expressao PONTO_VIRGULA
+    | atribuicao
+    | declaracao
+    | bloco
+    | IF OPEN_PAREN expressao CLOSE_PAREN bloco
+    | IF OPEN_PAREN expressao CLOSE_PAREN bloco ELSE bloco
+;
+```
+
+### Tipos suportados:
+
+* Expressões simples
+* Declarações de variáveis
+* Atribuições
+* Blocos `{ }`
+* Estruturas condicionais:
+
+  * `if`
+  * `if-else`
+
+---
+
+## 7. Tipos
+
+```c
+tipo:
+    INT
+    | FLOAT
+    | CHAR
+    | BOOL
 ;
 ```
 
 Tipos suportados:
 
-* Avaliação de expressões
-* Estrutura condicional (`if`)
-* Atribuição
+* `int`
+* `float`
+* `char`
+* `bool`
 
 ---
 
-## 7. Expressões
+## 8. Declarações
+
+```c
+declaracao:
+    tipo lista_ids PONTO_VIRGULA
+;
+```
+
+```c
+lista_ids:
+    ID
+    | ID EQUAL expressao
+    | lista_ids VIRGULA ID
+    | lista_ids VIRGULA ID EQUAL expressao
+;
+```
+
+### Exemplos válidos:
+
+```c
+int x;
+int x, y, z;
+int x = 10;
+int x = 10, y = 20;
+```
+
+### Observação importante
+
+* O tipo é aplicado **após a criação da AST**
+* Cada identificador vira um nó de declaração (`d`)
+
+---
+
+## 9. Atribuição
+
+```c
+atribuicao:
+    ID EQUAL expressao PONTO_VIRGULA
+;
+```
+
+Exemplo:
+
+```c
+x = 5 + 3;
+```
+
+---
+
+## 10. Expressões
 
 ```c
 expressao:
@@ -101,65 +185,97 @@ expressao:
     | expressao MINUS expressao
     | expressao MULT expressao
     | expressao DIV expressao
+    | expressao DEQ expressao
+    | expressao NEQ expressao
+    | expressao LT expressao
+    | expressao GT expressao
+    | expressao LE expressao
+    | expressao GE expressao
     | OPEN_PAREN expressao CLOSE_PAREN
-    | NUM
+    | INT_NUM
+    | FLOAT_NUM
+    | CHAR_NUM
+    | ID
 ;
 ```
 
+### Suporte completo:
+
+* Aritméticos: `+ - * /`
+* Relacionais: `== != < > <= >=`
+* Parênteses
+* Literais e identificadores
+
 ---
 
-## 8. Precedência de Operadores
+## 11. Precedência de Operadores
 
 ```c
+%left DEQ NEQ
+%left LT GT LE GE
 %left PLUS MINUS
 %left MULT DIV
 ```
 
-| Prioridade | Operadores |
-| ---------- | ---------- |
-| Alta       | `*`, `/`   |
-| Baixa      | `+`, `-`   |
+| Prioridade | Operadores           |
+| ---------- | -------------------- |
+| Alta       | `*`, `/`             |
+| Média      | `+`, `-`             |
+| Baixa      | `<`, `>`, `<=`, `>=` |
+| Mais baixa | `==`, `!=`           |
+
+### Associatividade
+
+* Todos são **associativos à esquerda**
 
 ---
 
-## 9. Tipagem Semântica
+## 12. Construção da AST
 
-```c
-%union {
-    int intValue;
-}
-```
+Cada regra cria nós específicos:
 
-* Todas as expressões são tratadas como inteiras
+| Estrutura     | Nó                        |
+| ------------- | ------------------------- |
+| Número        | `n`                       |
+| Identificador | `i`                       |
+| Operação      | operador (`+`, `-`, etc.) |
+| Declaração    | `d`                       |
+| Atribuição    | `=`                       |
+| Sequência     | `;`                       |
+| If            | `f`                       |
 
 ---
 
-## 10. Tratamento de Erros
+## 13. Tratamento de Erros
 
 ```c
-void yyerror(const char *s) {
-    printf("Erro sintatico: %s\n", s);
-}
+| error PONTO_VIRGULA { yyerrok; yyclearin; }
 ```
 
-## 11. Regras de Gramática e Precedência
+* Permite continuar parsing após erro
+* Evita abortar o programa inteiro
 
-Para garantir que expressões matemáticas sejam calculadas na ordem correta, a gramática define níveis de prioridade para os operadores. Operadores com maior precedência são "agrupados" antes dos de menor precedência.
+### Função de erro
 
-| Operador | Descrição | Precedência | Associatividade |
-| ---------- | ---------- | ---------- | ---------- |
-| `*`, `/`, `%` | Multiplicação, Divisão e Módulo | Alta | Esquerda |
-| `+`, `-` | Soma e Subtração | Baixa | Esquerda |
+```c
+void yyerror(...)
+```
 
-### Associatividade à Esquerda
+Exibe:
 
-A gramática utiliza **associatividade à esquerda** para operadores de mesma precedência. Isso significa que cálculos em sequência são resolvidos da esquerda para a direita.
-- **Exemplo:** A expressão `10 - 5 - 2` é interpretada pelo parser como `(10 - 5) - 2`, resultando em `3`, e não como `10 - (5 - 2)`.
+* Linha
+* Coluna
+* Token inesperado
+* Linha do código
+* Indicador `^`
 
-## Detalhamento Técnico
+---
 
-O interpretador utiliza o algoritmo **LALR (Look-Ahead Left-to-Right)**, gerado pelo Bison. Este método é o padrão para linguagens de programação modernas por combinar dois fatores críticos:
+## 14. Técnica Utilizada
 
-1. **Eficiência de Memória**: Utiliza tabelas de estados reduzidas em comparação ao LR(1) canônico, mantendo o compilador leve.
+* Parser **LALR(1)**
+* Gerado automaticamente pelo Bison
+* Usa look-ahead de 1 token
+* Alta eficiência e baixo uso de memória
 
-2. **Poder de Antecipação (Look-Ahead):** O parser consegue "olhar" o próximo token da entrada para decidir qual regra da gramática aplicar, o que ajuda a evitar ambiguidades (conflitos) e permite processar gramáticas complexas de forma determinística.
+---
