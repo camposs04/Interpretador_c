@@ -2,144 +2,86 @@
 
 ## 1. Visão Geral
 
-Este módulo descreve as **ações semânticas** associadas às regras da gramática.
+O sistema atual NÃO executa código.
 
-A implementação atual realiza a **avaliação de expressões aritméticas em tempo de parsing**.
+Ele realiza:
+
+* Construção da AST
+* Inferência simples de tipos
 
 ---
 
-## 2. Representação de Valores
+## 2. Estrutura de Tipos
 
 ```c
-%union {
-    int intValue;
+typedef enum {
+    T_INT,
+    T_FLOAT,
+    T_CHAR,
+    T_BOOL
 }
 ```
 
-* Todos os valores são tratados como inteiros
+---
+
+## 3. Inferência de Tipos
+
+Regra:
+
+* Se algum operando é `float` → resultado `float`
+* Caso contrário → `int`
 
 ---
 
-## 3. Avaliação de Expressões
+## 4. Declarações
 
-### Soma
-
-```c
-$$ = $1 + $3;
-```
-
-### Subtração
+Tipos são propagados na AST:
 
 ```c
-$$ = $1 - $3;
-```
-
-### Multiplicação
-
-```c
-$$ = $1 * $3;
-```
-
-### Divisão
-
-```c
-$$ = $1 / $3;
-```
-
-### Parênteses
-
-```c
-$$ = $2;
-```
-
-### Número
-
-```c
-$$ = $1;
+int x, y;
 ```
 
 ---
 
-## 4. Execução
+## 5. Estrutura do Nó AST
 
 ```c
-expressao PONTO_VIRGULA {
-    printf("%d\n", $1);
+struct noAST {
+    operador
+    tipo
+    valor
+    nome
+    esquerda
+    direita
 }
 ```
 
-* Expressões são avaliadas e impressas imediatamente
-
 ---
 
-## 5. Fluxo de Execução
+## 6. Impressão
 
-1. O analisador léxico gera tokens
-2. O parser reconhece a estrutura
-3. As ações semânticas calculam os valores
-4. O resultado é exibido
-
----
-
-## 6. Limitações Atuais
-
-* Não há tabela de símbolos
-* Variáveis não armazenam valores
-* Não há verificação de tipos
-* Não há tratamento de erros em tempo de execução
-* Estruturas como `if` não possuem execução real
-
----
-
-## 7. Funcionalidades Ausentes
-
-### 7.1 Tabela de Símbolos
-
-* Necessária para armazenar variáveis
-
-### 7.2 Sistema de Tipos
-
-* Garantir consistência entre tipos
-
-### 7.3 Controle de Fluxo
-
-* Execução real de `if`, `for`, etc.
-
-### 7.4 Validação em Tempo de Execução
-
-* Divisão por zero
-* Variáveis não declaradas
-
----
-
-## 8. Exemplo
-
-### Entrada
+A AST é convertida para código:
 
 ```c
-10 + 2 * 3;
-```
-
-### Avaliação
-
-* `2 * 3 = 6`
-* `10 + 6 = 16`
-
-### Saída
-
-```text
-16
+int x = 5;
 ```
 
 ---
 
-## 9. Conclusão
+## 7. Limitações
 
-O sistema atual funciona como:
+* Sem tabela de símbolos
+* Sem validação de tipos
+* Sem execução
+* Sem escopo
 
-* Um **validador sintático**
-* Um **avaliador de expressões aritméticas**
+---
 
-Ainda não representa um interpretador completo da linguagem C, mas constitui uma base sólida para evolução futura.
+## 8. Próximos Passos
+
+* Tabela de símbolos
+* Verificação de tipos
+* Execução real
+* Controle de escopo
 
 ---
