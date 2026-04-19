@@ -2,49 +2,51 @@
 
 ## 1. Visão Geral
 
-Este arquivo documenta a  implementação do analisador léxico utilizando Flex. Sua principal responsabilidade é ler o código-fonte de entrada e convertê-lo em uma sequência de tokens que serão consumidos pelo analisador sintático.
+O analisador léxico foi implementado com **Flex**.
 
-O analisador reconhece:
+Responsabilidades:
 
-* Palavras-chave
-* Identificadores
-* Literais numéricos
-* Operadores
-* Delimitadores
+* Ler o código fonte
+* Identificar tokens
+* Controlar posição (linha/coluna)
+* Reportar erros léxicos
 
 ---
 
-## 2. Dependências
+## 2. Estrutura Interna
+
+Variáveis globais:
 
 ```c
-#include "parserC.tab.h"
-#include <stdio.h>
-#include <stdlib.h>
+int linha = 1;
+int coluna = 1;
+char linhaAtual[1024];
 ```
 
-* `parserC.tab.h`: definição dos tokens compartilhados com o parser
-* Bibliotecas padrão da linguagem C
+* `linha`: número da linha atual
+* `coluna`: posição do caractere
+* `linhaAtual`: conteúdo da linha (para debug)
 
 ---
 
-## 3. Definição de Tokens
+## 3. Tokens Reconhecidos
 
 ### 3.1 Palavras-chave
 
-| Lexema | Token  |
-| ------ | ------ |
-| if     | IF     |
-| else   | ELSE   |
-| int    | INT    |
-| float  | FLOAT  |
-| char   | CHAR   |
-| bool   | BOOL   |
-| for    | FOR    |
-| return | RETURN |
-| break  | BREAK  |
-| void   | VOID   |
-| printf | PRINTF |
-| scanf  | SCANF  |
+| Palavra | Token  |
+| ------- | ------ |
+| if      | IF     |
+| else    | ELSE   |
+| int     | INT    |
+| float   | FLOAT  |
+| char    | CHAR   |
+| bool    | BOOL   |
+| for     | FOR    |
+| return  | RETURN |
+| break   | BREAK  |
+| void    | VOID   |
+| printf  | PRINTF |
+| scanf   | SCANF  |
 
 ---
 
@@ -54,116 +56,106 @@ O analisador reconhece:
 [a-zA-Z][a-zA-Z0-9]*
 ```
 
-* Devem iniciar com uma letra
-* Podem conter letras e números
-* Token retornado: `ID`
+* Devem iniciar com letra
+* Podem conter números
 
 ---
 
-### 3.3 Literais Numéricos
+### 3.3 Literais
 
-```text
-[0-9]+"."[0-9]+
-[0-9]+
-```
-
-* Suporte a inteiros e ponto flutuante
-* Ambos retornam o token `NUM`
+| Tipo    | Exemplo | Token     |
+| ------- | ------- | --------- |
+| Inteiro | 10      | INT_NUM   |
+| Float   | 10.5    | FLOAT_NUM |
+| Char    | 'a'     | CHAR_NUM  |
 
 ---
 
-### 3.4 Operadores Aritméticos
+### 3.4 Operadores
 
-| Símbolo | Token |
-| ------- | ----- |
-| +       | PLUS  |
-| -       | MINUS |
-| *       | MULT  |
-| /       | DIV   |
-| %       | MOD   |
+#### Aritméticos
 
----
+`+ - * / %`
 
-### 3.5 Operadores de Atribuição
+#### Relacionais
 
-| Símbolo | Token      |
-| ------- | ---------- |
-| =       | EQUAL      |
-| +=      | ADD_EQUAL  |
-| -=      | SUB_EQUAL  |
-| *=      | MULT_EQUAL |
-| /=      | DIV_EQUAL  |
-| %=      | MOD_EQUAL  |
+`== != < > <= >=`
 
----
+#### Lógicos
 
-### 3.6 Incremento e Decremento
+`&& || !`
 
-| Símbolo | Token     |
-| ------- | --------- |
-| ++      | INCREMENT |
-| --      | DECREMENT |
+#### Atribuição
+
+`= += -= *= /= %=`
+
+#### Incremento
+
+`++ --`
 
 ---
 
-### 3.7 Operadores Lógicos
-
-| Símbolo | Token |
-| ------- | ----- |
-| !       | NOT   |
-| &&      | AND   |
-| \|\|    | OR    |
-
----
-
-### 3.8 Operadores Relacionais
-
-Os operadores abaixo são reconhecidos, porém **ATUALMENTE** utilizados apenas para depuração:
-
-```text
-== != <= >= < >
-```
-
-Eles não retornam tokens, apenas imprimem mensagens no console.
-
----
-
-### 3.9 Delimitadores
-
-| Símbolo | Token         |
-| ------- | ------------- |
-| ;       | PONTO_VIRGULA |
-| (       | OPEN_PAREN    |
-| )       | CLOSE_PAREN   |
-| {       | ABRE_CHAVES   |
-| }       | FECHA_CHAVES  |
-| ,       | VIRGULA       |
-| '       | ASPASSIMPLES  |
-
----
-
-## 4. Padrões Ignorados
-
-```text
-[ \t\n]+
-```
-
-* Espaços em branco são ignorados
-* Não geram tokens
-
----
-
-## 5. Tratamento de Erros
+## 4. Comentários
 
 ```c
-. { printf("DESCONHECIDO(%s)\n", yytext); }
+// comentário
 ```
 
-* Caracteres não reconhecidos são reportados como erro léxico
+* Ignorados
+* Mantidos no buffer para exibição de erro
 
 ---
 
-## 6. Fim de Arquivo
+## 5. Controle de Posição
+
+Cada token:
+
+* Atualiza coluna
+* Armazena texto na linha
+
+Macro:
+
+```c
+ADD_TEXTO()
+```
+
+---
+
+## 6. Integração com Parser
+
+Valores enviados via:
+
+```c
+yylval
+```
+
+Tipos:
+
+* `int`
+* `float`
+* `char`
+* `string` (ID)
+
+---
+
+## 7. Tratamento de Erros
+
+```c
+. { erro }
+```
+
+Saída:
+
+```
+ERROR LEXER
+Line X Column Y
+    código
+        ^
+```
+
+---
+
+## 8. Fim de Arquivo
 
 ```c
 int yywrap() {
@@ -171,5 +163,4 @@ int yywrap() {
 }
 ```
 
-* Indica o fim da entrada
-
+---
