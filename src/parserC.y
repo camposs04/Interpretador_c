@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "ast.h"
+#include "tac.h"
 #include <string.h>
 
 int yylex(void);
@@ -67,7 +68,7 @@ programa:
     lista {
         root = $1;
         printf("\nAST do programa:\n");
-        imprimirAST(root);
+        gerarTAC(root);
         printf("\n");
     }
 ;
