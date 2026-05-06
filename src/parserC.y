@@ -1,8 +1,10 @@
 %{
 #include <stdio.h>
 #include <stdlib.h>
-#include "ast.h"
 #include <string.h>
+
+#include "ast.h"
+#include "tac.h"
 
 int yylex(void);
 void yyerror(const char *s);
@@ -66,8 +68,8 @@ extern char *yytext;
 programa:
     lista {
         root = $1;
-        printf("\nAST do programa:\n");
-        imprimirAST(root);
+        printf("\nTAC do programa:\n");
+        gerarTAC(root);
         printf("\n");
     }
 ;
