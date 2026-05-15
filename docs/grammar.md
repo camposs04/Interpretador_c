@@ -8,15 +8,23 @@ O parser é responsável por:
 
 * Validar a estrutura sintática do programa
 * Construir uma **Árvore Sintática Abstrata (AST)**
+* Disparar a geração de TAC ao final do parsing
 * Tratar erros sintáticos com indicação de linha e coluna
 
 A gramática implementa um subconjunto da linguagem C com foco em:
 
-* Declarações
+* Declarações de variáveis
 * Atribuições
-* Expressões
-* Estruturas condicionais (`if / else`)
+* Expressões aritméticas e relacionais
+* Estruturas condicionais (`if` / `if-else`)
 * Blocos `{}`
+
+### Dependências incluídas
+
+```c
+#include "ast.h"
+#include "tac.h"
+```
 
 ---
 
@@ -30,8 +38,12 @@ programa:
 ;
 ```
 
-* Um programa é composto por uma sequência de elementos
-* Ao final do parsing, a AST é impressa
+Ao final do parsing, o TAC é gerado e impresso:
+
+```c
+printf("\nTAC do programa:\n");
+gerarTAC(root);
+```
 
 ---
 
@@ -44,8 +56,7 @@ lista:
 ;
 ```
 
-* Implementa múltiplas instruções
-* Utiliza recursão à esquerda
+* Implementa múltiplas instruções via recursão à esquerda
 * Internamente gera nós de sequência (`;`) na AST
 
 ---
@@ -58,8 +69,6 @@ elemento:
 ;
 ```
 
-* Todo elemento do programa é tratado como comando
-
 ---
 
 ## 5. Blocos
@@ -68,9 +77,7 @@ elemento:
 bloco:
     ABRE_CHAVES comandos FECHA_CHAVES
 ;
-```
 
-```c
 comandos:
     comandos comando
     | comando
@@ -78,7 +85,7 @@ comandos:
 ```
 
 * Representam agrupamento de instruções
-* Não há escopo semântico ainda (apenas estrutura sintática)
+* Sem escopo semântico nesta sprint — apenas estrutura sintática
 
 ---
 
@@ -92,19 +99,18 @@ comando:
     | bloco
     | IF OPEN_PAREN expressao CLOSE_PAREN bloco
     | IF OPEN_PAREN expressao CLOSE_PAREN bloco ELSE bloco
+    | error PONTO_VIRGULA
 ;
 ```
 
-### Tipos suportados:
+### Tipos suportados
 
 * Expressões simples
 * Declarações de variáveis
 * Atribuições
-* Blocos `{ }`
-* Estruturas condicionais:
-
-  * `if`
-  * `if-else`
+* Blocos `{}`
+* `if` e `if-else`
+* Recuperação de erro via `error PONTO_VIRGULA`
 
 ---
 
@@ -112,19 +118,11 @@ comando:
 
 ```c
 tipo:
-    INT
-    | FLOAT
-    | CHAR
-    | BOOL
+    INT | FLOAT | CHAR | BOOL
 ;
 ```
 
-Tipos suportados:
-
-* `int`
-* `float`
-* `char`
-* `bool`
+Retorna o valor do enum `Tipo` correspondente (`T_INT`, `T_FLOAT`, `T_CHAR`, `T_BOOL`).
 
 ---
 
@@ -134,9 +132,7 @@ Tipos suportados:
 declaracao:
     tipo lista_ids PONTO_VIRGULA
 ;
-```
 
-```c
 lista_ids:
     ID
     | ID EQUAL expressao
@@ -145,7 +141,7 @@ lista_ids:
 ;
 ```
 
-### Exemplos válidos:
+### Exemplos válidos
 
 ```c
 int x;
@@ -154,10 +150,22 @@ int x = 10;
 int x = 10, y = 20;
 ```
 
-### Observação importante
+### Propagação de tipo
 
-* O tipo é aplicado **após a criação da AST**
-* Cada identificador vira um nó de declaração (`d`)
+O tipo é aplicado após a criação dos nós via travessia da lista:
+
+```c
+NoAST *aux = $$;
+while (aux != NULL) {
+    if (aux->operador == ';') {
+        if (aux->esquerda) aux->esquerda->tipo = $1;
+        aux = aux->direita;
+    } else {
+        aux->tipo = $1;
+        break;
+    }
+}
+```
 
 ---
 
@@ -166,6 +174,7 @@ int x = 10, y = 20;
 ```c
 atribuicao:
     ID EQUAL expressao PONTO_VIRGULA
+    | ID EQUAL error PONTO_VIRGULA
 ;
 ```
 
@@ -181,7 +190,7 @@ x = 5 + 3;
 
 ```c
 expressao:
-      expressao PLUS expressao
+    expressao PLUS expressao
     | expressao MINUS expressao
     | expressao MULT expressao
     | expressao DIV expressao
@@ -199,13 +208,6 @@ expressao:
 ;
 ```
 
-### Suporte completo:
-
-* Aritméticos: `+ - * /`
-* Relacionais: `== != < > <= >=`
-* Parênteses
-* Literais e identificadores
-
 ---
 
 ## 11. Precedência de Operadores
@@ -218,64 +220,83 @@ expressao:
 ```
 
 | Prioridade | Operadores           |
-| ---------- | -------------------- |
+|------------|----------------------|
 | Alta       | `*`, `/`             |
 | Média      | `+`, `-`             |
 | Baixa      | `<`, `>`, `<=`, `>=` |
 | Mais baixa | `==`, `!=`           |
 
-### Associatividade
-
-* Todos são **associativos à esquerda**
+Todos associativos à esquerda.
 
 ---
 
 ## 12. Construção da AST
 
-Cada regra cria nós específicos:
+Cada regra cria nós específicos via funções de `ast.h`:
 
-| Estrutura     | Nó                        |
-| ------------- | ------------------------- |
-| Número        | `n`                       |
-| Identificador | `i`                       |
-| Operação      | operador (`+`, `-`, etc.) |
-| Declaração    | `d`                       |
-| Atribuição    | `=`                       |
-| Sequência     | `;`                       |
-| If            | `f`                       |
+| Estrutura     | Nó  | Função criadora   |
+|---------------|-----|-------------------|
+| Número        | `n` | `criarNoInt`, `criarNoFloat`, `criarNoChar` |
+| Identificador | `i` | `criarNoId`       |
+| Operação      | operador (`+`, `-`, etc.) | `criarNoOp` |
+| Declaração    | `d` | `criarNoDecl`     |
+| Atribuição    | `=` | `criarNoAtrib`    |
+| Sequência     | `;` | `criarNoSeq`      |
+| If            | `f` | `criarNoIf`       |
 
 ---
 
-## 13. Tratamento de Erros
+## 13. Geração de TAC
+
+Ao final do parsing, a função `gerarTAC` (definida em `tac.c`) percorre a AST e emite instruções de três endereços. Exemplo:
+
+**Entrada:**
+```c
+int x = 3 + 5;
+if (x > 2) { x = x - 1; }
+```
+
+**TAC gerado:**
+```
+decl int x
+t1 = 3
+t2 = 5
+t3 = t1 + t2
+x = t3
+t4 = x
+t5 = 2
+t6 = t4 > t5
+if_false t6 goto L1
+t7 = x
+t8 = 1
+t9 = t7 - t8
+x = t9
+L1:
+```
+
+---
+
+## 14. Tratamento de Erros
 
 ```c
 | error PONTO_VIRGULA { yyerrok; yyclearin; }
 ```
 
-* Permite continuar parsing após erro
+* Permite continuar o parsing após um erro
 * Evita abortar o programa inteiro
 
 ### Função de erro
 
 ```c
-void yyerror(...)
+void yyerror(const char *s)
 ```
 
-Exibe:
-
-* Linha
-* Coluna
-* Token inesperado
-* Linha do código
-* Indicador `^`
+Exibe linha, coluna, token inesperado e indicador `^` no código fonte.
 
 ---
 
-## 14. Técnica Utilizada
+## 15. Técnica Utilizada
 
-* Parser **LALR(1)**
-* Gerado automaticamente pelo Bison
-* Usa look-ahead de 1 token
+* Parser **LALR(1)** gerado automaticamente pelo Bison
+* Look-ahead de 1 token
 * Alta eficiência e baixo uso de memória
-
----
