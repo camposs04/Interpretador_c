@@ -25,7 +25,16 @@ char linhaAtual[1024];
 
 * `linha`: número da linha atual
 * `coluna`: posição do caractere
-* `linhaAtual`: conteúdo da linha (para debug)
+* `linhaAtual`: conteúdo da linha (para exibição de erros)
+
+### Dependências incluídas
+
+```c
+#include "parserC.tab.h"
+#include "tabsym.h"
+```
+
+A inclusão de `tabsym.h` conecta o lexer à tabela de símbolos, permitindo que identificadores reconhecidos sejam consultados durante a análise léxica.
 
 ---
 
@@ -33,20 +42,20 @@ char linhaAtual[1024];
 
 ### 3.1 Palavras-chave
 
-| Palavra | Token  |
-| ------- | ------ |
-| if      | IF     |
-| else    | ELSE   |
-| int     | INT    |
-| float   | FLOAT  |
-| char    | CHAR   |
-| bool    | BOOL   |
-| for     | FOR    |
-| return  | RETURN |
-| break   | BREAK  |
-| void    | VOID   |
-| printf  | PRINTF |
-| scanf   | SCANF  |
+| Palavra   | Token    |
+|-----------|----------|
+| `if`      | IF       |
+| `else`    | ELSE     |
+| `int`     | INT      |
+| `float`   | FLOAT    |
+| `char`    | CHAR     |
+| `bool`    | BOOL     |
+| `for`     | FOR      |
+| `return`  | RETURN   |
+| `break`   | BREAK    |
+| `void`    | VOID     |
+| `printf`  | PRINTF   |
+| `scanf`   | SCANF    |
 
 ---
 
@@ -58,16 +67,17 @@ char linhaAtual[1024];
 
 * Devem iniciar com letra
 * Podem conter números
+* Valor enviado ao parser via `yylval.id` com `strdup`
 
 ---
 
 ### 3.3 Literais
 
 | Tipo    | Exemplo | Token     |
-| ------- | ------- | --------- |
-| Inteiro | 10      | INT_NUM   |
-| Float   | 10.5    | FLOAT_NUM |
-| Char    | 'a'     | CHAR_NUM  |
+|---------|---------|-----------|
+| Inteiro | `10`    | INT_NUM   |
+| Float   | `10.5`  | FLOAT_NUM |
+| Char    | `'a'`   | CHAR_NUM  |
 
 ---
 
@@ -75,92 +85,99 @@ char linhaAtual[1024];
 
 #### Aritméticos
 
-`+ - * / %`
+`+` `-` `*` `/` `%`
 
 #### Relacionais
 
-`== != < > <= >=`
+`==` `!=` `<` `>` `<=` `>=`
 
 #### Lógicos
 
-`&& || !`
+`&&` `||` `!`
 
-#### Atribuição
+#### Atribuição simples
 
-`= += -= *= /= %=`
+`=`
 
-#### Incremento
+#### Atribuição composta
 
-`++ --`
+`+=` `-=` `*=` `/=` `%=`
+
+#### Incremento e decremento
+
+`++` `--`
 
 ---
 
 ## 4. Comentários
 
 ```c
-// comentário
+// comentário de linha
 ```
 
-* Ignorados
-* Mantidos no buffer para exibição de erro
+* Ignorados pelo parser
+* Mantidos no buffer `linhaAtual` para exibição em mensagens de erro
 
 ---
 
 ## 5. Controle de Posição
 
-Cada token:
-
-* Atualiza coluna
-* Armazena texto na linha
-
-Macro:
+Cada token atualiza `coluna` com `coluna += yyleng`. O texto do token é armazenado em `linhaAtual` via macro:
 
 ```c
-ADD_TEXTO()
+#define ADD_TEXTO() \
+    if (posLinha + yyleng < 1023) { \
+        strncpy(&linhaAtual[posLinha], yytext, yyleng); \
+        posLinha += yyleng; \
+        linhaAtual[posLinha] = '\0'; \
+    }
 ```
+
+Ao encontrar `\n`, `linhaAtual` é reiniciado e `linha` é incrementado.
 
 ---
 
 ## 6. Integração com Parser
 
-Valores enviados via:
+Valores enviados via `yylval`:
 
-```c
-yylval
-```
-
-Tipos:
-
-* `int`
-* `float`
-* `char`
-* `string` (ID)
+| Campo         | Tipo    | Usado por          |
+|---------------|---------|--------------------|
+| `intValue`    | `int`   | INT_NUM, CHAR_NUM  |
+| `floatValue`  | `float` | FLOAT_NUM          |
+| `id`          | `char*` | ID                 |
 
 ---
 
-## 7. Tratamento de Erros
+## 7. Integração com Tabela de Símbolos
+
+O lexer inclui `tabsym.h` diretamente. Isso permite que futuras regras léxicas consultem ou pré-registrem símbolos conforme os identificadores são reconhecidos, sem depender de fases posteriores.
+
+---
+
+## 8. Tratamento de Erros
+
+Qualquer caractere não reconhecido cai na regra padrão:
 
 ```c
 . { erro }
 ```
 
-Saída:
+Saída exibida:
 
 ```
 ERROR LEXER
-Line X Column Y
-    código
-        ^
+Line: X Column: Y | error: invalid character '?'
+    código fonte
+    ^
 ```
 
 ---
 
-## 8. Fim de Arquivo
+## 9. Fim de Arquivo
 
 ```c
 int yywrap() {
     return 1;
 }
 ```
-
----
