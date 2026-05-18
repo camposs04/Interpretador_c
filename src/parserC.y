@@ -5,6 +5,7 @@
 
 #include "ast.h"
 #include "tac.h"
+#include "semantic.h"
 
 int yylex(void);
 void yyerror(const char *s);
