@@ -5,6 +5,7 @@
 
 #include "ast.h"
 #include "tac.h"
+#include "tabsym.h"
 #include "semantic.h"
 
 int yylex(void);
@@ -69,6 +70,7 @@ extern char *yytext;
 programa:
     lista {
         root = $1;
+        analisarSemantica(root);
         printf("\nTAC do programa:\n");
         gerarTAC(root);
         printf("\n");
@@ -85,7 +87,7 @@ elemento:
 ;
 
 bloco:
-    ABRE_CHAVES comandos FECHA_CHAVES { $$ = $2; }
+    ABRE_CHAVES { entrarEscopo(); } comandos FECHA_CHAVES { sairEscopo(); $$ = $3; }
 ;
 
 
@@ -180,6 +182,7 @@ expressao:
 %%
 
 int main(){
+    entrarEscopo();
     return yyparse();
 }
 
