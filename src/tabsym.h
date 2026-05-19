@@ -1,17 +1,24 @@
 #ifndef TABSYM_H
 #define TABSYM_H
 
+#define TABLE_SIZE 211 
+
 typedef struct Symb {
     char *name;
     char *type;
     struct Symb *next;
 } Symb;
 
-#define TABLE_SIZE 211 
+typedef struct Escopo {
+    Symb *tabela[TABLE_SIZE];
+    struct Escopo *anterior;
+} Escopo;
 
-unsigned int hash(char *str);
+void entrarEscopo(void);
+void sairEscopo(void);
 void insertSymbol(char *name, char *type);
 Symb* searchSymbol(char *name);
-void printTable();
+Symb* searchSymbolEscopoAtual(char *name);
+void imprimirTabela(void);
 
 #endif
