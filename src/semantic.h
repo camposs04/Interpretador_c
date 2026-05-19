@@ -4,5 +4,6 @@
 #include "ast.h"
 
 void analisarSemantica(NoAST *raiz);
+int errosSemanticos(void);
 
 #endif

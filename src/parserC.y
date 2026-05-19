@@ -71,9 +71,14 @@ programa:
     lista {
         root = $1;
         analisarSemantica(root);
-        printf("\nTAC do programa:\n");
-        gerarTAC(root);
-        printf("\n");
+        imprimirTabela();
+        if (errosSemanticos() > 0) {
+            printf("\n%d erro(s) semantico(s) encontrado(s). TAC nao gerado.\n", errosSemanticos());
+        } else {
+            printf("\nTAC do programa:\n");
+            gerarTAC(root);
+            printf("\n");
+        }
     }
 ;
 

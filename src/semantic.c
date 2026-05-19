@@ -6,6 +6,12 @@
 #include "ast.h"
 #include "semantic.h"
 
+static int numErros = 0;
+
+int errosSemanticos(void) {
+    return numErros;
+}
+
 char* mapearTipoParaString(Tipo tipo) {
     switch (tipo) {
         case T_INT:   return "int";
@@ -22,6 +28,7 @@ static void declaration(NoAST *raiz) {
 
     if (searchSymbolEscopoAtual(nome) != NULL) {
         printf("Erro Semantico: Variavel '%s' ja declarada neste escopo.\n", nome);
+        numErros++;
     } else {
         insertSymbol(nome, tipo_str);
     }
@@ -36,6 +43,7 @@ static void identifier(NoAST *raiz) {
 
     if (simbolo == NULL) {
         printf("Erro Semantico: Variavel '%s' nao declarada.\n", raiz->nome);
+        numErros++;
     } else {
         if      (strcmp(simbolo->type, "int")   == 0) raiz->tipo = T_INT;
         else if (strcmp(simbolo->type, "float") == 0) raiz->tipo = T_FLOAT;
@@ -68,17 +76,14 @@ void analisarSemantica(NoAST *raiz) {
             return;
 
         case 'f': {
-            /* analisa a condição no escopo atual */
             analisarSemantica(raiz->esquerda);
 
             NoAST *corpo = raiz->direita;
 
-            /* bloco then */
             entrarEscopo();
             analisarSemantica(corpo->esquerda);
             sairEscopo();
 
-            /* bloco else (opcional) */
             if (corpo->direita != NULL) {
                 entrarEscopo();
                 analisarSemantica(corpo->direita);
