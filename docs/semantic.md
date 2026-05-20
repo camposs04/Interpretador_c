@@ -33,6 +33,30 @@ Regra aplicada em `criarNoOp`:
 * Se algum operando é `T_FLOAT` → resultado `T_FLOAT`
 * Caso contrário → `T_INT`
 
+### 3.1 Constant Folding
+
+Durante a construção da AST, expressões compostas inteiramente por
+literais são calculadas em tempo de compilação e reduzidas a um
+único nó literal.
+
+Exemplos:
+- `2 + 3 * 4`  →  nó INT(14)
+- `5 > 3`      →  nó BOOL(true)
+
+Identidades algébricas também são simplificadas quando um dos
+operandos é literal:
+
+| Expressão    | Resultado |
+|--------------|-----------|
+| `x + 0`      | `x`       |
+| `x * 1`      | `x`       |
+| `x * 0`      | `0`       |
+| `x / 1`      | `x`       |
+| `x && true`  | `x`       |
+| `x && false` | `false`   |
+| `x || true`  | `true`    |
+| `x || false` | `x`       |
+| `!!x`        | `x`       |
 ---
 
 ## 4. Declarações
@@ -117,6 +141,8 @@ x = t3
 * Sem validação de tipos em atribuições
 * Sem execução real do código
 * Sem suporte a funções
+* Divisão por zero entre literais é detectada na fase de [Constant Folding](#31-constant-folding) via `erroSemantico()`.
+
 
 ---
 

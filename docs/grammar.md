@@ -244,6 +244,12 @@ Cada regra cria nós específicos via funções de `ast.h`:
 | Sequência     | `;` | `criarNoSeq`      |
 | If            | `f` | `criarNoIf`       |
 
+### 12.1 Otimização na criação de nós
+
+A função `criarNoOp` aplica constant folding antes de alocar um
+nó binário. Quando ambos os filhos são literais, retorna diretamente
+um nó literal com o valor calculado, sem criar o nó de operação.
+
 ---
 
 ## 13. Geração de TAC
