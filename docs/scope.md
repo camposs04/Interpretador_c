@@ -58,6 +58,11 @@ x - y
 x * y
 x / y
 ```
+### 5.1 Otimizações em tempo de compilação
+
+Expressões formadas apenas por literais são avaliadas durante a
+construção da AST (constant folding). O TAC gerado não contém
+instruções desnecessárias para esses casos.
 
 ### Relacionais
 
