@@ -139,9 +139,10 @@ x = t3
 
 * Sem escopo aninhado — a tabela atual é global
 * Sem validação de tipos em atribuições
+    * Divisão por zero entre literais é detectada na fase de [Constant Folding](#31-constant-folding) via `erroSemantico()`.
+
 * Sem execução real do código
 * Sem suporte a funções
-* Divisão por zero entre literais é detectada na fase de [Constant Folding](#31-constant-folding) via `erroSemantico()`.
 
 
 ---
