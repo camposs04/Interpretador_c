@@ -16,9 +16,9 @@ typedef struct Escopo {
 
 void entrarEscopo(void);
 void sairEscopo(void);
-void insertSymbol(char *name, char *type);
-Symb* searchSymbol(char *name);
-Symb* searchSymbolEscopoAtual(char *name);
+void insertSymbol(const char *name, const char *type);
+Symb* searchSymbol(const char *name);
+Symb* searchSymbolEscopoAtual(const char *name);
 void imprimirTabela(void);
 
 #endif

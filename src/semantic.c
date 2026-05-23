@@ -8,48 +8,43 @@
 
 static int numErros = 0;
 
-int errosSemanticos(void) {
-    return numErros;
-}
+int errosSemanticos(void) { return numErros; }
 
-char* mapearTipoParaString(Tipo tipo) {
-    switch (tipo) {
+static const char *tipoStr(Tipo t) {
+    switch (t) {
         case T_INT:   return "int";
         case T_FLOAT: return "float";
         case T_CHAR:  return "char";
         case T_BOOL:  return "bool";
-        default:      return "unknown";
+        default:      return "void";
     }
 }
 
 static void declaration(NoAST *raiz) {
-    char *nome = raiz->esquerda->nome;
-    char *tipo_str = mapearTipoParaString(raiz->tipo);
+    const char *nome     = raiz->esquerda->nome;
+    const char *tipo_str = tipoStr(raiz->tipo);
 
     if (searchSymbolEscopoAtual(nome) != NULL) {
-        printf("Erro Semantico: Variavel '%s' ja declarada neste escopo.\n", nome);
+        printf("Erro Semantico: variavel '%s' ja declarada neste escopo.\n", nome);
         numErros++;
     } else {
         insertSymbol(nome, tipo_str);
     }
 
-    if (raiz->direita != NULL) {
-        analisarSemantica(raiz->direita);
-    }
+    if (raiz->direita) analisarSemantica(raiz->direita);
 }
 
 static void identifier(NoAST *raiz) {
-    Symb *simbolo = searchSymbol(raiz->nome);
-
-    if (simbolo == NULL) {
-        printf("Erro Semantico: Variavel '%s' nao declarada.\n", raiz->nome);
+    Symb *s = searchSymbol(raiz->nome);
+    if (!s) {
+        printf("Erro Semantico: variavel '%s' nao declarada.\n", raiz->nome);
         numErros++;
-    } else {
-        if      (strcmp(simbolo->type, "int")   == 0) raiz->tipo = T_INT;
-        else if (strcmp(simbolo->type, "float") == 0) raiz->tipo = T_FLOAT;
-        else if (strcmp(simbolo->type, "char")  == 0) raiz->tipo = T_CHAR;
-        else if (strcmp(simbolo->type, "bool")  == 0) raiz->tipo = T_BOOL;
+        return;
     }
+    if      (strcmp(s->type,"int")   == 0) raiz->tipo = T_INT;
+    else if (strcmp(s->type,"float") == 0) raiz->tipo = T_FLOAT;
+    else if (strcmp(s->type,"char")  == 0) raiz->tipo = T_CHAR;
+    else if (strcmp(s->type,"bool")  == 0) raiz->tipo = T_BOOL;
 }
 
 void analisarSemantica(NoAST *raiz) {
@@ -65,9 +60,16 @@ void analisarSemantica(NoAST *raiz) {
             identifier(raiz);
             return;
 
+        /* atribuição e operadores compostos */
         case '=':
+        case 'a': case 's': case 'm': case 'v': case 'r':
             analisarSemantica(raiz->esquerda);
             analisarSemantica(raiz->direita);
+            return;
+
+        /* ++ / -- têm apenas filho esquerdo */
+        case 'I': case 'D':
+            analisarSemantica(raiz->esquerda);
             return;
 
         case ';':
@@ -75,26 +77,71 @@ void analisarSemantica(NoAST *raiz) {
             analisarSemantica(raiz->direita);
             return;
 
+        /* if/else */
         case 'f': {
-            analisarSemantica(raiz->esquerda);
-
+            analisarSemantica(raiz->esquerda);   /* condição */
             NoAST *corpo = raiz->direita;
-
             entrarEscopo();
-            analisarSemantica(corpo->esquerda);
+            analisarSemantica(corpo->esquerda);  /* bloco then */
             sairEscopo();
-
-            if (corpo->direita != NULL) {
+            if (corpo->direita) {
                 entrarEscopo();
-                analisarSemantica(corpo->direita);
+                analisarSemantica(corpo->direita); /* bloco else */
                 sairEscopo();
             }
             return;
         }
 
+        /* while */
+        case 'W':
+            analisarSemantica(raiz->esquerda);   /* condição */
+            entrarEscopo();
+            analisarSemantica(raiz->direita);    /* corpo */
+            sairEscopo();
+            return;
+
+        /* for: esquerda = meta(init,incr), direita = seq(cond,corpo) */
+        case 'F': {
+            NoAST *meta  = raiz->esquerda;
+            NoAST *resto = raiz->direita;
+            entrarEscopo();                      /* escopo do for */
+            analisarSemantica(meta->esquerda);   /* init */
+            analisarSemantica(resto->esquerda);  /* cond */
+            analisarSemantica(meta->direita);    /* incr */
+            entrarEscopo();
+            analisarSemantica(resto->direita);   /* corpo */
+            sairEscopo();
+            sairEscopo();
+            return;
+        }
+
+        /* printf */
+        case 'P':
+            analisarSemantica(raiz->esquerda);
+            return;
+
+        /* operadores lógicos */
+        case 'A': case 'O':
+            analisarSemantica(raiz->esquerda);
+            analisarSemantica(raiz->direita);
+            raiz->tipo = T_BOOL;
+            return;
+
+        case 'N':
+            analisarSemantica(raiz->esquerda);
+            raiz->tipo = T_BOOL;
+            return;
+
         default:
             analisarSemantica(raiz->esquerda);
             analisarSemantica(raiz->direita);
+
+            /* propaga tipo após resolução dos filhos */
+            if (raiz->esquerda && raiz->direita) {
+                Tipo te = raiz->esquerda->tipo;
+                Tipo td = raiz->direita->tipo;
+                raiz->tipo = (te == T_FLOAT || td == T_FLOAT) ? T_FLOAT : T_INT;
+            }
             return;
     }
 }

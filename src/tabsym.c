@@ -5,7 +5,7 @@
 
 static Escopo *escopoAtual = NULL;
 
-static unsigned int hash(char *str) {
+static unsigned int hash(const char *str) {
     unsigned int h = 0;
     while (*str) {
         h += *str++;
@@ -42,7 +42,7 @@ void sairEscopo(void) {
 }
 
 /* busca só no escopo atual — usada para detectar redeclaração */
-Symb* searchSymbolEscopoAtual(char *name) {
+Symb* searchSymbolEscopoAtual(const char *name) {
     if (escopoAtual == NULL) return NULL;
 
     unsigned int i = hash(name);
@@ -56,7 +56,7 @@ Symb* searchSymbolEscopoAtual(char *name) {
 }
 
 /* busca em todos os escopos — usada para detectar uso sem declaração */
-Symb* searchSymbol(char *name) {
+Symb* searchSymbol(const char *name) {
     Escopo *e = escopoAtual;
     while (e != NULL) {
         unsigned int i = hash(name);
@@ -71,7 +71,7 @@ Symb* searchSymbol(char *name) {
     return NULL;
 }
 
-void insertSymbol(char *name, char *type) {
+void insertSymbol(const char *name, const char *type) {
     if (escopoAtual == NULL) {
         printf("Erro interno: nenhum escopo ativo.\n");
         return;
