@@ -1,6 +1,9 @@
-int a; 
-a = 10;
-int b;
-b = 5;
-int c;
-c = a - b;
+int i = 0;
+while (i < 3) {
+    printf(i);
+    i++;
+}
+
+for (int j = 0; j < 3; j++) {
+    printf(j);
+}
