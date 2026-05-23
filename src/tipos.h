@@ -1,3 +1,6 @@
+#ifndef TIPOS_H
+#define TIPOS_H
+
 typedef enum {
     T_INT,
     T_FLOAT,
@@ -21,3 +24,5 @@ typedef struct noAST {
     struct noAST *esquerda;
     struct noAST *direita;
 } NoAST;
+
+#endif

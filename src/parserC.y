@@ -7,6 +7,7 @@
 #include "tac.h"
 #include "tabsym.h"
 #include "semantic.h"
+#include "interpreter.h"
 
 int yylex(void);
 void yyerror(const char *s);
@@ -78,6 +79,7 @@ programa:
             printf("\nTAC do programa:\n");
             gerarTAC(root);
             printf("\n");
+            interpretarPrograma(root);
         }
     }
 ;
