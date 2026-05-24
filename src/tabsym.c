@@ -105,3 +105,19 @@ void imprimirTabela(void) {
         e = e->anterior;
     }
 }
+void insertFuncao(const char *name, Tipo retorno, Param *params, struct noAST *corpo) {
+    if (escopoAtual == NULL) {
+        printf("Erro interno: nenhum escopo ativo.\n");
+        return;
+    }
+    unsigned int i = hash(name);
+    Symb *novo     = calloc(1, sizeof(Symb));
+    novo->name     = strdup(name);
+    novo->type     = strdup("func");
+    novo->retorno  = retorno;
+    novo->isFuncao = 1;
+    novo->params   = params;
+    novo->corpo    = corpo;
+    novo->next     = escopoAtual->tabela[i];
+    escopoAtual->tabela[i] = novo;
+}

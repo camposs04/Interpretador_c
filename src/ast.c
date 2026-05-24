@@ -302,3 +302,57 @@ NoAST *criarListaArgs(NoAST *arg, NoAST *resto) {
     novo->direita  = resto;
     return novo;
 }
+/* ── nós de função ── */
+
+Param *criarParam(Tipo tipo, const char *nome) {
+    Param *p = calloc(1, sizeof(Param));
+    p->tipo = tipo;
+    strncpy(p->nome, nome, 63);
+    p->nome[63] = '\0';
+    p->prox = NULL;
+    return p;
+}
+
+/* Adiciona 'novo' ao FINAL da lista para preservar ordem dos parâmetros */
+Param *adicionarParam(Param *lista, Param *novo) {
+    if (lista == NULL) return novo;
+    Param *p = lista;
+    while (p->prox) p = p->prox;
+    p->prox = novo;
+    return lista;
+}
+
+/* 'Z' = definição de função */
+NoAST *criarNoDefFuncao(Tipo retorno, const char *nome, Param *params, NoAST *corpo) {
+    NoAST *novo = calloc(1, sizeof(NoAST));
+    novo->operador = 'Z';
+    novo->tipo     = retorno;
+    strncpy(novo->nome, nome, 255);
+    novo->nome[255] = '\0';
+    novo->params   = params;
+    novo->esquerda = corpo;
+    novo->direita  = NULL;
+    return novo;
+}
+
+/* 'C' = chamada de função */
+NoAST *criarNoChamada(const char *nome, NoAST *args) {
+    NoAST *novo = calloc(1, sizeof(NoAST));
+    novo->operador = 'C';
+    novo->tipo     = T_VOID;   /* resolvido pela semântica */
+    strncpy(novo->nome, nome, 255);
+    novo->nome[255] = '\0';
+    novo->esquerda = args;
+    novo->direita  = NULL;
+    return novo;
+}
+
+/* 'K' = return */
+NoAST *criarNoReturn(NoAST *expr) {
+    NoAST *novo = calloc(1, sizeof(NoAST));
+    novo->operador = 'K';
+    novo->tipo     = T_VOID;
+    novo->esquerda = expr;
+    novo->direita  = NULL;
+    return novo;
+}

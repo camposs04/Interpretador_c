@@ -16,6 +16,7 @@ static const char *tipoStr(Tipo t) {
         case T_FLOAT: return "float";
         case T_CHAR:  return "char";
         case T_BOOL:  return "bool";
+        case T_FUNC:  return "func";
         default:      return "void";
     }
 }
@@ -67,7 +68,6 @@ void analisarSemantica(NoAST *raiz) {
             analisarSemantica(raiz->direita);
             return;
 
-        /* ++ / -- têm apenas filho esquerdo */
         case 'I': case 'D':
             analisarSemantica(raiz->esquerda);
             return;
@@ -79,50 +79,45 @@ void analisarSemantica(NoAST *raiz) {
 
         /* if/else */
         case 'f': {
-            analisarSemantica(raiz->esquerda);   /* condição */
+            analisarSemantica(raiz->esquerda);
             NoAST *corpo = raiz->direita;
             entrarEscopo();
-            analisarSemantica(corpo->esquerda);  /* bloco then */
+            analisarSemantica(corpo->esquerda);
             sairEscopo();
             if (corpo->direita) {
                 entrarEscopo();
-                analisarSemantica(corpo->direita); /* bloco else */
+                analisarSemantica(corpo->direita);
                 sairEscopo();
             }
             return;
         }
 
-        /* while */
         case 'W':
-            analisarSemantica(raiz->esquerda);   /* condição */
+            analisarSemantica(raiz->esquerda);
             entrarEscopo();
-            analisarSemantica(raiz->direita);    /* corpo */
+            analisarSemantica(raiz->direita);
             sairEscopo();
             return;
 
-        /* for: esquerda = meta(init,incr), direita = seq(cond,corpo) */
         case 'F': {
             NoAST *meta  = raiz->esquerda;
             NoAST *resto = raiz->direita;
-            entrarEscopo();                      /* escopo do for */
-            analisarSemantica(meta->esquerda);   /* init */
-            analisarSemantica(resto->esquerda);  /* cond */
-            analisarSemantica(meta->direita);    /* incr */
             entrarEscopo();
-            analisarSemantica(resto->direita);   /* corpo */
+            analisarSemantica(meta->esquerda);
+            analisarSemantica(resto->esquerda);
+            analisarSemantica(meta->direita);
+            entrarEscopo();
+            analisarSemantica(resto->direita);
             sairEscopo();
             sairEscopo();
             return;
         }
 
-        /* printf simples */
         case 'P':
             analisarSemantica(raiz->esquerda);
             return;
 
-        /* printf com formato — analisa cada argumento */
         case 'R': {
-            /* esquerda é nó 'S' (string), não precisa análise */
             NoAST *cur = raiz->direita;
             while (cur != NULL) {
                 if (cur->operador == 'L') {
@@ -136,7 +131,6 @@ void analisarSemantica(NoAST *raiz) {
             return;
         }
 
-        /* operadores lógicos */
         case 'A': case 'O':
             analisarSemantica(raiz->esquerda);
             analisarSemantica(raiz->direita);
@@ -148,11 +142,74 @@ void analisarSemantica(NoAST *raiz) {
             raiz->tipo = T_BOOL;
             return;
 
+        /* ── definição de função ── */
+        case 'Z': {
+            /* Registra a função no escopo global antes de analisar o corpo,
+               permitindo recursão. */
+            if (searchSymbolEscopoAtual(raiz->nome) != NULL) {
+                printf("Erro Semantico: funcao '%s' ja declarada.\n", raiz->nome);
+                numErros++;
+            } else {
+                insertFuncao(raiz->nome, raiz->tipo, raiz->params, raiz->esquerda);
+            }
+
+            /* Abre escopo para parâmetros + corpo */
+            entrarEscopo();
+            for (Param *p = raiz->params; p != NULL; p = p->prox)
+                insertSymbol(p->nome, tipoStr(p->tipo));
+            analisarSemantica(raiz->esquerda);
+            sairEscopo();
+            return;
+        }
+
+        /* ── chamada de função ── */
+        case 'C': {
+            Symb *s = searchSymbol(raiz->nome);
+            if (!s || !s->isFuncao) {
+                printf("Erro Semantico: funcao '%s' nao declarada.\n", raiz->nome);
+                numErros++;
+                return;
+            }
+            /* Propaga tipo de retorno */
+            raiz->tipo = s->retorno;
+
+            /* Verifica número de argumentos */
+            int nparams = 0;
+            for (Param *p = s->params; p; p = p->prox) nparams++;
+            int nargs = 0;
+            for (NoAST *cur = raiz->esquerda; cur != NULL; ) {
+                nargs++;
+                if (cur->operador == 'L') cur = cur->direita;
+                else break;
+            }
+            if (nargs != nparams) {
+                printf("Erro Semantico: funcao '%s' espera %d argumento(s), recebeu %d.\n",
+                       raiz->nome, nparams, nargs);
+                numErros++;
+            }
+
+            /* Analisa cada argumento */
+            NoAST *cur = raiz->esquerda;
+            while (cur != NULL) {
+                if (cur->operador == 'L') {
+                    analisarSemantica(cur->esquerda);
+                    cur = cur->direita;
+                } else {
+                    analisarSemantica(cur);
+                    break;
+                }
+            }
+            return;
+        }
+
+        /* ── return ── */
+        case 'K':
+            analisarSemantica(raiz->esquerda);
+            return;
+
         default:
             analisarSemantica(raiz->esquerda);
             analisarSemantica(raiz->direita);
-
-            /* propaga tipo após resolução dos filhos */
             if (raiz->esquerda && raiz->direita) {
                 Tipo te = raiz->esquerda->tipo;
                 Tipo td = raiz->direita->tipo;
