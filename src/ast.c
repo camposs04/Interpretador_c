@@ -44,8 +44,8 @@ NoAST *criarNoBool(int valor) {
 NoAST *criarNoId(char *nome) {
     NoAST *novo = alocarNo();
     novo->operador = 'i';
-    strncpy(novo->nome, nome, 31);
-    novo->nome[31] = '\0';
+    strncpy(novo->nome, nome, 63);
+    novo->nome[63] = '\0';
     return novo;
 }
 
@@ -268,4 +268,37 @@ void imprimirAST(NoAST *raiz) {
             printf(")");
             break;
     }
+}
+
+/* Nó que guarda uma string literal no campo nome[] (até 255 chars).
+   Para strings maiores seria necessário alocação dinâmica — suficiente
+   para strings de formato de printf acadêmico. */
+NoAST *criarNoString(const char *texto) {
+    NoAST *novo = alocarNo();
+    novo->operador = 'S';
+    strncpy(novo->nome, texto, 255);
+    novo->nome[255] = '\0';
+    return novo;
+}
+
+/* printf com formato: operador 'R'
+   esquerda = nó 'S' com a string de formato
+   direita  = lista de args encadeada com ';' (ou NULL) */
+NoAST *criarNoPrintfFmt(NoAST *fmt, NoAST *args) {
+    NoAST *novo = alocarNo();
+    novo->operador = 'R';
+    novo->esquerda = fmt;
+    novo->direita  = args;
+    return novo;
+}
+
+/* Lista de argumentos do printf — usa operador 'L' para não conflitar com ';' de sequência.
+   esquerda = argumento atual, direita = próximo nó 'L' ou NULL */
+NoAST *criarListaArgs(NoAST *arg, NoAST *resto) {
+    if (arg == NULL) return resto;
+    NoAST *novo = alocarNo();
+    novo->operador = 'L';
+    novo->esquerda = arg;
+    novo->direita  = resto;
+    return novo;
 }

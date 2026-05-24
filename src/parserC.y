@@ -34,7 +34,7 @@ extern char *yytext;
 
 %token <intValue>   INT_NUM CHAR_NUM BOOL_VAL
 %token <floatValue> FLOAT_NUM
-%token <id>         ID
+%token <id>         ID STRING_LITERAL
 
 %token IF ELSE WHILE FOR RETURN BREAK VOID
 %token INT FLOAT CHAR BOOL
@@ -50,7 +50,7 @@ extern char *yytext;
 %type <intValue> tipo
 %type <ast> expressao lista elemento comando atribuicao
 %type <ast> declaracao comandos bloco lista_ids
-%type <ast> incr_expr
+%type <ast> incr_expr args_printf
 
 /* precedência — do menor para o maior */
 %right EQUAL ADD_EQUAL SUB_EQUAL MULT_EQUAL DIV_EQUAL MOD_EQUAL
@@ -118,6 +118,12 @@ comando:
   | FOR OPEN_PAREN for_init expressao PONTO_VIRGULA incr_expr CLOSE_PAREN bloco
       { $$ = criarNoFor($<ast>3, $4, $6, $8); }
 
+  | PRINTF OPEN_PAREN STRING_LITERAL CLOSE_PAREN PONTO_VIRGULA
+      { $$ = criarNoPrintfFmt(criarNoString($3), NULL); free($3); }
+
+  | PRINTF OPEN_PAREN STRING_LITERAL VIRGULA args_printf CLOSE_PAREN PONTO_VIRGULA
+      { $$ = criarNoPrintfFmt(criarNoString($3), $5); free($3); }
+
   | PRINTF OPEN_PAREN expressao CLOSE_PAREN PONTO_VIRGULA
       { $$ = criarNoPrintf($3); }
 ;
@@ -146,6 +152,13 @@ incr_expr:
 
   | expressao                { $$ = $1; }
   | /* vazio */              { $$ = NULL; }
+;
+
+args_printf:
+    expressao
+        { $$ = criarListaArgs($1, NULL); }
+  | args_printf VIRGULA expressao
+        { $$ = criarListaArgs($3, $1); }
 ;
 
 tipo:

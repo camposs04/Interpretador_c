@@ -19,7 +19,7 @@ typedef struct noAST {
         char  c;
     } valor;
 
-    char nome[32];
+    char nome[256];
 
     struct noAST *esquerda;
     struct noAST *direita;

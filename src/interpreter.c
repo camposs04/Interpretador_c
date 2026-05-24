@@ -342,11 +342,83 @@ static void executar(NoAST *raiz) {
             break;
         }
 
-        /* printf simples: imprime o valor da expressão */
+        /* printf simples: imprime o valor da expressão (forma antiga) */
         case 'P': {
             Valor val = avaliar(raiz->esquerda);
             imprimirValor(val);
             printf("\n");
+            break;
+        }
+
+        /* printf com string de formato: printf("fmt", arg1, arg2, ...) */
+        /* printf com formato: "R" */
+        case 'R': {
+            const char *fmt = raiz->esquerda->nome;
+
+            /* a lista de args usa operador 'L', construída ao contrário pelo parser
+               (left-recursive): L(c, L(b, L(a, NULL))) → percorrendo: c,b,a
+               então coletamos em pilha e invertemos para obter a,b,c */
+            Valor pilha[32];
+            int   np = 0;
+            NoAST *cur = raiz->direita;
+            while (cur != NULL && np < 32) {
+                if (cur->operador == 'L') {
+                    pilha[np++] = avaliar(cur->esquerda);
+                    cur = cur->direita;
+                } else {
+                    pilha[np++] = avaliar(cur);
+                    break;
+                }
+            }
+            /* inverte para ordem de declaração */
+            Valor args[32];
+            int   nargs = np;
+            for (int ii = 0; ii < np; ii++)
+                args[ii] = pilha[np - 1 - ii];
+
+            /* percorre a string de formato */
+            int ai = 0;
+            for (int fi = 0; fmt[fi] != '\0'; fi++) {
+                if (fmt[fi] == '\\') {
+                    fi++;
+                    switch (fmt[fi]) {
+                        case 'n':  putchar('\n'); break;
+                        case 't':  putchar('\t'); break;
+                        case 'r':  putchar('\r'); break;
+                        case '\\': putchar('\\'); break;
+                        case '"':  putchar('"');  break;
+                        default:   putchar('\\'); putchar(fmt[fi]); break;
+                    }
+                } else if (fmt[fi] == '%') {
+                    fi++;
+                    if (ai >= nargs) { putchar('%'); putchar(fmt[fi]); continue; }
+                    Valor v = args[ai++];
+                    switch (fmt[fi]) {
+                        case 'd': case 'i':
+                            printf("%d", (v.tipo == T_FLOAT) ? (int)v.dado.f : v.dado.i);
+                            break;
+                        case 'f':
+                            printf("%f", (v.tipo == T_FLOAT) ? v.dado.f : (float)v.dado.i);
+                            break;
+                        case 'g':
+                            printf("%g", (v.tipo == T_FLOAT) ? v.dado.f : (float)v.dado.i);
+                            break;
+                        case 'c':
+                            printf("%c", (v.tipo == T_CHAR) ? v.dado.c : (char)v.dado.i);
+                            break;
+                        case 's':
+                            if (v.tipo == T_BOOL)
+                                printf("%s", v.dado.i ? "true" : "false");
+                            else
+                                printf("%d", v.dado.i);
+                            break;
+                        case '%': putchar('%'); ai--; break;
+                        default:  putchar('%'); putchar(fmt[fi]); ai--; break;
+                    }
+                } else {
+                    putchar(fmt[fi]);
+                }
+            }
             break;
         }
 

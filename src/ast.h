@@ -20,5 +20,8 @@ NoAST *criarNoAnd(NoAST *esq, NoAST *dir);
 NoAST *criarNoOr(NoAST *esq, NoAST *dir);
 NoAST *criarNoNot(NoAST *operando);
 void   imprimirAST(NoAST *raiz);
+NoAST *criarNoString(const char *texto);
+NoAST *criarNoPrintfFmt(NoAST *fmt, NoAST *args);
+NoAST *criarListaArgs(NoAST *arg, NoAST *resto);
 
 #endif

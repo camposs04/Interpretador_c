@@ -172,11 +172,46 @@ char *gerarTAC(NoAST *raiz) {
             return NULL;
         }
 
-        /* printf */
+        /* printf simples */
         case 'P': {
             char *val = gerarTAC(raiz->esquerda);
             printf("print %s\n", val);
             liberarTemp(val);
+            return NULL;
+        }
+
+        /* printf com formato */
+        case 'R': {
+            /* emite os temporários dos argumentos e depois a instrução */
+            char *argTemps[32];
+            int   nargs = 0;
+
+            /* coleta em pilha (lista invertida) e emite em ordem */
+            char *pilha[32];
+            int   np = 0;
+            NoAST *cur = raiz->direita;
+            while (cur != NULL && np < 32) {
+                if (cur->operador == 'L') {
+                    pilha[np++] = gerarTAC(cur->esquerda);
+                    cur = cur->direita;
+                } else {
+                    pilha[np++] = gerarTAC(cur);
+                    break;
+                }
+            }
+            /* inverte */
+            for (int i = 0; i < np / 2; i++) {
+                char *tmp = pilha[i]; pilha[i] = pilha[np-1-i]; pilha[np-1-i] = tmp;
+            }
+            nargs = np;
+            for (int i = 0; i < nargs; i++) argTemps[i] = pilha[i];
+
+            printf("printf \"%s\"", raiz->esquerda->nome);
+            for (int i = 0; i < nargs; i++) {
+                printf(", %s", argTemps[i] ? argTemps[i] : "?");
+                liberarTemp(argTemps[i]);
+            }
+            printf("\n");
             return NULL;
         }
 
