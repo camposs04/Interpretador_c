@@ -5,6 +5,8 @@
 #include "interpreter.h"
 #include "ast.h"
 
+extern int debug;
+
 /* ── pilha de escopos em tempo de execução ── */
 static EscopoRT *escopoAtual = NULL;
 
@@ -210,9 +212,7 @@ static void executar(NoAST *raiz) {
                 Valor val = avaliar(raiz->direita);
                 v->valor  = converterPara(val, raiz->tipo);
             }
-            printf("[decl] %s = ", nome);
-            imprimirValor(v->valor);
-            printf("\n");
+            if (debug) { printf("[decl] %s = ", nome); imprimirValor(v->valor); printf("\n"); }
             break;
         }
 
@@ -223,9 +223,7 @@ static void executar(NoAST *raiz) {
             if (!v) { printf("Erro RT: variavel '%s' nao encontrada.\n", nome); break; }
             Valor val = avaliar(raiz->direita);
             v->valor  = converterPara(val, v->valor.tipo);
-            printf("[atrib] %s = ", nome);
-            imprimirValor(v->valor);
-            printf("\n");
+            if (debug) { printf("[atrib] %s = ", nome); imprimirValor(v->valor); printf("\n"); }
             break;
         }
 
@@ -270,9 +268,7 @@ static void executar(NoAST *raiz) {
                     break;
             }
             v->valor = converterPara(res, v->valor.tipo);
-            printf("[op=] %s = ", nome);
-            imprimirValor(v->valor);
-            printf("\n");
+            if (debug) { printf("[op=] %s = ", nome); imprimirValor(v->valor); printf("\n"); }
             break;
         }
 
@@ -288,9 +284,7 @@ static void executar(NoAST *raiz) {
                 v->valor.dado.f += (raiz->operador == 'I') ? 1.0f : -1.0f;
             else
                 v->valor.dado.i += (raiz->operador == 'I') ? 1 : -1;
-            printf("[%s] %s = ", raiz->operador=='I' ? "++" : "--", nome);
-            imprimirValor(v->valor);
-            printf("\n");
+            if (debug) { printf("[%s] %s = ", raiz->operador=='I' ? "++" : "--", nome); imprimirValor(v->valor); printf("\n"); }
             break;
         }
 
@@ -432,8 +426,8 @@ static void executar(NoAST *raiz) {
 /* ── ponto de entrada público ── */
 void interpretarPrograma(NoAST *raiz) {
     entrarEscopoRT();
-    printf("\n--- EXECUCAO ---\n");
+    if (debug) printf("\n--- EXECUCAO ---\n");
     executar(raiz);
-    printf("--- FIM ---\n");
+    if (debug) printf("--- FIM ---\n");
     sairEscopoRT();
 }
