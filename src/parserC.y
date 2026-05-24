@@ -21,6 +21,7 @@ extern char *yytext;
 %}
 
 %define parse.error simple
+%glr-parser
 
 %code requires {
     #include "ast.h"
@@ -31,6 +32,7 @@ extern char *yytext;
     float  floatValue;
     char  *id;
     NoAST *ast;
+    Param *param;
 }
 
 %token <intValue>   INT_NUM CHAR_NUM BOOL_VAL
@@ -48,12 +50,13 @@ extern char *yytext;
 %token DEQ NEQ LE GE LT GT
 %token PRINTF SCANF ASPASSIMPLES
 
-%type <intValue> tipo
-%type <ast> expressao lista elemento comando atribuicao
-%type <ast> declaracao comandos bloco lista_ids
-%type <ast> incr_expr args_printf
+%type <intValue>  tipo tipo_ret
+%type <ast>  expressao lista elemento comando atribuicao
+%type <ast>  declaracao comandos bloco lista_ids
+%type <ast>  incr_expr args_printf args_chamada def_funcao
+%type <param> params_formais param_formal
 
-/* precedência — do menor para o maior */
+/* precedência */
 %right EQUAL ADD_EQUAL SUB_EQUAL MULT_EQUAL DIV_EQUAL MOD_EQUAL
 %left  OR
 %left  AND
@@ -62,7 +65,7 @@ extern char *yytext;
 %left  PLUS MINUS
 %left  MULT DIV MOD
 %right NOT
-%right INCREMENT DECREMENT   /* prefixo */
+%right INCREMENT DECREMENT
 
 %%
 
@@ -90,7 +93,35 @@ lista:
   | elemento        { $$ = $1; }
 ;
 
-elemento: comando ;
+elemento:
+    comando        { $$ = $1; }
+  | def_funcao     { $$ = $1; }
+;
+
+/* ── Definição de função ── */
+def_funcao:
+    tipo_ret ID OPEN_PAREN params_formais CLOSE_PAREN bloco
+      { $$ = criarNoDefFuncao($1, $2, $4, $6); free($2); }
+  | tipo_ret ID OPEN_PAREN CLOSE_PAREN bloco
+      { $$ = criarNoDefFuncao($1, $2, NULL, $5); free($2); }
+;
+
+tipo_ret:
+    tipo  { $$ = $1; }
+  | VOID  { $$ = T_VOID; }
+;
+
+params_formais:
+    param_formal
+        { $$ = $1; }
+  | params_formais VIRGULA param_formal
+        { $$ = adicionarParam($1, $3); }
+;
+
+param_formal:
+    tipo ID
+        { $$ = criarParam($1, $2); free($2); }
+;
 
 bloco:
     ABRE_CHAVES { entrarEscopo(); } comandos FECHA_CHAVES { sairEscopo(); $$ = $3; }
@@ -129,16 +160,20 @@ comando:
 
   | PRINTF OPEN_PAREN expressao CLOSE_PAREN PONTO_VIRGULA
       { $$ = criarNoPrintf($3); }
+
+  | RETURN expressao PONTO_VIRGULA
+      { $$ = criarNoReturn($2); }
+
+  | RETURN PONTO_VIRGULA
+      { $$ = criarNoReturn(NULL); }
 ;
 
-/* init do for pode ser declaração ou atribuição ou vazio */
 for_init:
     declaracao       { $<ast>$ = $1; }
   | atribuicao       { $<ast>$ = $1; }
   | PONTO_VIRGULA    { $<ast>$ = NULL; }
 ;
 
-/* incremento do for: expr composta ou simples */
 incr_expr:
     ID ADD_EQUAL  expressao  { $$ = criarNoOp('a', criarNoId($1), $3); }
   | ID SUB_EQUAL  expressao  { $$ = criarNoOp('s', criarNoId($1), $3); }
@@ -149,10 +184,6 @@ incr_expr:
   | ID DECREMENT             { $$ = criarNoOp('D', criarNoId($1), NULL); }
   | INCREMENT ID             { $$ = criarNoOp('I', criarNoId($2), NULL); }
   | DECREMENT ID             { $$ = criarNoOp('D', criarNoId($2), NULL); }
-
-
-
-
   | expressao                { $$ = $1; }
   | /* vazio */              { $$ = NULL; }
 ;
@@ -161,6 +192,14 @@ args_printf:
     expressao
         { $$ = criarListaArgs($1, NULL); }
   | args_printf VIRGULA expressao
+        { $$ = criarListaArgs($3, $1); }
+;
+
+/* argumentos de chamada de função — mesma estrutura que args_printf */
+args_chamada:
+    expressao
+        { $$ = criarListaArgs($1, NULL); }
+  | args_chamada VIRGULA expressao
         { $$ = criarListaArgs($3, $1); }
 ;
 
@@ -174,17 +213,14 @@ tipo:
 declaracao:
     tipo lista_ids PONTO_VIRGULA {
         $$ = $2;
-        /* propaga o tipo correto por toda a lista de declarações */
         NoAST *aux = $$;
         while (aux != NULL) {
             if (aux->operador == ';') {
-                /* nó sequência: o filho esquerdo é o nó 'd' desta variável */
                 NoAST *decl = aux->esquerda;
                 while (decl && decl->operador == ';') decl = decl->esquerda;
                 if (decl && decl->operador == 'd') decl->tipo = $1;
                 aux = aux->direita;
             } else {
-                /* nó 'd' terminal */
                 aux->tipo = $1;
                 break;
             }
@@ -232,13 +268,15 @@ expressao:
   | expressao AND   expressao  { $$ = criarNoAnd($1, $3); }
   | expressao OR    expressao  { $$ = criarNoOr($1, $3); }
   | NOT expressao              { $$ = criarNoNot($2); }
-
-
   | OPEN_PAREN expressao CLOSE_PAREN { $$ = $2; }
   | INT_NUM    { $$ = criarNoInt($1); }
   | FLOAT_NUM  { $$ = criarNoFloat($1); }
   | CHAR_NUM   { $$ = criarNoChar((char)$1); }
   | BOOL_VAL   { $$ = criarNoBool($1); }
+  | ID OPEN_PAREN args_chamada CLOSE_PAREN
+      { $$ = criarNoChamada($1, $3); free($1); }
+  | ID OPEN_PAREN CLOSE_PAREN
+      { $$ = criarNoChamada($1, NULL); free($1); }
   | ID         { $$ = criarNoId($1); }
 ;
 

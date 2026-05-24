@@ -4,17 +4,21 @@
 
 #include "interpreter.h"
 #include "ast.h"
+#include "tabsym.h"
 
 extern int debug;
 
 /* ── pilha de escopos em tempo de execução ── */
 static EscopoRT *escopoAtual = NULL;
 
+/* Sinal global de return — propagado até o chamador da função */
+static ReturnSinal returnSinal = {0, {T_VOID, {0}}};
+
 static void entrarEscopoRT(void) {
-    EscopoRT *novo  = malloc(sizeof(EscopoRT));
-    novo->vars      = NULL;
-    novo->anterior  = escopoAtual;
-    escopoAtual     = novo;
+    EscopoRT *novo = malloc(sizeof(EscopoRT));
+    novo->vars     = NULL;
+    novo->anterior = escopoAtual;
+    escopoAtual    = novo;
 }
 
 static void sairEscopoRT(void) {
@@ -36,7 +40,7 @@ static VarRT *buscarVar(const char *nome) {
 
 static VarRT *declararVar(const char *nome, Tipo tipo) {
     VarRT *v = calloc(1, sizeof(VarRT));
-    strncpy(v->nome, nome, 31);
+    strncpy(v->nome, nome, 63);
     v->valor.tipo   = tipo;
     v->valor.dado.i = 0;
     v->prox         = escopoAtual->vars;
@@ -55,17 +59,14 @@ static void imprimirValor(Valor v) {
     }
 }
 
-/* converte Valor para float para operações mistas */
 static float toFloat(Valor v) {
     return (v.tipo == T_FLOAT) ? v.dado.f : (float)v.dado.i;
 }
 
-/* converte Valor para int (verdade) para condicionais */
 static int toInt(Valor v) {
     return (v.tipo == T_FLOAT) ? (int)v.dado.f : v.dado.i;
 }
 
-/* aplica conversão de tipo ao atribuir */
 static Valor converterPara(Valor val, Tipo destino) {
     if (val.tipo == destino) return val;
     Valor r; r.tipo = destino;
@@ -89,6 +90,10 @@ static Valor converterPara(Valor val, Tipo destino) {
     return r;
 }
 
+/* forward declaration */
+static Valor avaliar(NoAST *raiz);
+static void  executar(NoAST *raiz);
+
 /* ── avaliação de expressão ── */
 static Valor avaliar(NoAST *raiz) {
     Valor resultado = { T_INT, {0} };
@@ -96,7 +101,6 @@ static Valor avaliar(NoAST *raiz) {
 
     switch (raiz->operador) {
 
-        /* literal */
         case 'n':
             resultado.tipo = raiz->tipo;
             switch (raiz->tipo) {
@@ -108,7 +112,6 @@ static Valor avaliar(NoAST *raiz) {
             }
             return resultado;
 
-        /* identificador */
         case 'i': {
             VarRT *v = buscarVar(raiz->nome);
             if (!v) {
@@ -118,10 +121,8 @@ static Valor avaliar(NoAST *raiz) {
             return v->valor;
         }
 
-        /* lógicos */
         case 'A': {
             Valor esq = avaliar(raiz->esquerda);
-            /* curto-circuito */
             if (!toInt(esq)) { resultado.tipo = T_BOOL; resultado.dado.i = 0; return resultado; }
             Valor dir = avaliar(raiz->direita);
             resultado.tipo = T_BOOL;
@@ -130,7 +131,7 @@ static Valor avaliar(NoAST *raiz) {
         }
         case 'O': {
             Valor esq = avaliar(raiz->esquerda);
-            if (toInt(esq))  { resultado.tipo = T_BOOL; resultado.dado.i = 1; return resultado; }
+            if (toInt(esq)) { resultado.tipo = T_BOOL; resultado.dado.i = 1; return resultado; }
             Valor dir = avaliar(raiz->direita);
             resultado.tipo = T_BOOL;
             resultado.dado.i = toInt(dir) ? 1 : 0;
@@ -141,6 +142,63 @@ static Valor avaliar(NoAST *raiz) {
             resultado.tipo   = T_BOOL;
             resultado.dado.i = toInt(op) ? 0 : 1;
             return resultado;
+        }
+
+        /* ── chamada de função como expressão ── */
+        case 'C': {
+            Symb *s = searchSymbol(raiz->nome);
+            if (!s || !s->isFuncao) {
+                printf("Erro RT: funcao '%s' nao encontrada.\n", raiz->nome);
+                return resultado;
+            }
+
+            /* Coleta argumentos (lista 'L' invertida, igual ao printf) */
+            Valor pilha[32];
+            int   np = 0;
+            NoAST *cur = raiz->esquerda;
+            while (cur != NULL && np < 32) {
+                if (cur->operador == 'L') {
+                    pilha[np++] = avaliar(cur->esquerda);
+                    cur = cur->direita;
+                } else {
+                    pilha[np++] = avaliar(cur);
+                    break;
+                }
+            }
+            /* Inverte para ordem de declaração */
+            Valor args[32];
+            int nargs = np;
+            for (int ii = 0; ii < np; ii++)
+                args[ii] = pilha[np - 1 - ii];
+
+            /* Salva escopo atual e cria escopo isolado para a função */
+            EscopoRT *escopoAntes = escopoAtual;
+            escopoAtual = NULL;
+            entrarEscopoRT();
+
+            /* Declara e inicializa parâmetros */
+            int ai = 0;
+            for (Param *p = s->params; p != NULL; p = p->prox, ai++) {
+                VarRT *var = declararVar(p->nome, p->tipo);
+                if (ai < nargs)
+                    var->valor = converterPara(args[ai], p->tipo);
+            }
+
+            /* Reseta sinal de retorno e executa o corpo */
+            returnSinal.ativo   = 0;
+            returnSinal.valor   = resultado;
+            executar(s->corpo);
+            Valor retVal = returnSinal.valor;
+
+            /* Restaura escopo do chamador */
+            sairEscopoRT();
+            escopoAtual = escopoAntes;
+            returnSinal.ativo = 0;
+
+            /* Converte para tipo de retorno da função */
+            if (s->retorno != T_VOID)
+                retVal = converterPara(retVal, s->retorno);
+            return retVal;
         }
 
         /* aritméticos e relacionais */
@@ -164,10 +222,7 @@ static Valor avaliar(NoAST *raiz) {
                     else          { resultado.tipo=T_INT;   resultado.dado.i=esq.dado.i*dir.dado.i; }
                     break;
                 case '/':
-                    if (vd == 0.0f) {
-                        printf("Erro RT: divisao por zero.\n");
-                        return resultado;
-                    }
+                    if (vd == 0.0f) { printf("Erro RT: divisao por zero.\n"); return resultado; }
                     if (usaFloat) { resultado.tipo=T_FLOAT; resultado.dado.f=ve/vd; }
                     else          { resultado.tipo=T_INT;   resultado.dado.i=esq.dado.i/dir.dado.i; }
                     break;
@@ -190,21 +245,19 @@ static Valor avaliar(NoAST *raiz) {
     }
 }
 
-/* ── execução de comandos — forward declaration ── */
-static void executar(NoAST *raiz);
-
+/* ── execução de comandos ── */
 static void executar(NoAST *raiz) {
     if (raiz == NULL) return;
+    /* Para de executar quando um return foi disparado */
+    if (returnSinal.ativo) return;
 
     switch (raiz->operador) {
 
-        /* sequência */
         case ';':
             executar(raiz->esquerda);
             executar(raiz->direita);
             break;
 
-        /* declaração */
         case 'd': {
             const char *nome = raiz->esquerda->nome;
             VarRT *v = declararVar(nome, raiz->tipo);
@@ -212,11 +265,9 @@ static void executar(NoAST *raiz) {
                 Valor val = avaliar(raiz->direita);
                 v->valor  = converterPara(val, raiz->tipo);
             }
-            if (debug) { printf("[decl] %s = ", nome); imprimirValor(v->valor); printf("\n"); }
             break;
         }
 
-        /* atribuição simples */
         case '=': {
             const char *nome = raiz->esquerda->nome;
             VarRT *v = buscarVar(nome);
@@ -227,14 +278,7 @@ static void executar(NoAST *raiz) {
             break;
         }
 
-        /* operadores compostos: nó '=' com filho especial '+=' etc.
-           O parser gera esses como atribuições expandidas, mas caso
-           venham como operador próprio ('a','s','m','v','r') tratamos aqui. */
-        case 'a': /* += */
-        case 's': /* -= */
-        case 'm': /* *= */
-        case 'v': /* /= */
-        case 'r': /* %= */
+        case 'a': case 's': case 'm': case 'v': case 'r':
         {
             const char *nome = raiz->esquerda->nome;
             VarRT *v = buscarVar(nome);
@@ -268,15 +312,11 @@ static void executar(NoAST *raiz) {
                     break;
             }
             v->valor = converterPara(res, v->valor.tipo);
-            if (debug) { printf("[op=] %s = ", nome); imprimirValor(v->valor); printf("\n"); }
             break;
         }
 
-        /* ++ e -- (pré/pós não distinguidos — efeito colateral é o mesmo) */
-        case 'I': /* ++ */
-        case 'D': /* -- */
+        case 'I': case 'D':
         {
-            /* filho esquerdo é nó 'i' com o nome da variável */
             const char *nome = (raiz->esquerda) ? raiz->esquerda->nome : raiz->nome;
             VarRT *v = buscarVar(nome);
             if (!v) { printf("Erro RT: variavel '%s' nao encontrada.\n", nome); break; }
@@ -284,13 +324,11 @@ static void executar(NoAST *raiz) {
                 v->valor.dado.f += (raiz->operador == 'I') ? 1.0f : -1.0f;
             else
                 v->valor.dado.i += (raiz->operador == 'I') ? 1 : -1;
-            if (debug) { printf("[%s] %s = ", raiz->operador=='I' ? "++" : "--", nome); imprimirValor(v->valor); printf("\n"); }
             break;
         }
 
-        /* if / else */
         case 'f': {
-            Valor cond  = avaliar(raiz->esquerda);
+            Valor cond   = avaliar(raiz->esquerda);
             NoAST *corpo = raiz->direita;
             if (toInt(cond)) {
                 entrarEscopoRT();
@@ -304,7 +342,6 @@ static void executar(NoAST *raiz) {
             break;
         }
 
-        /* while */
         case 'W': {
             while (1) {
                 Valor cond = avaliar(raiz->esquerda);
@@ -312,31 +349,31 @@ static void executar(NoAST *raiz) {
                 entrarEscopoRT();
                 executar(raiz->direita);
                 sairEscopoRT();
+                if (returnSinal.ativo) break;
             }
             break;
         }
 
-        /* for: esquerda = meta(init, incr), direita = seq(cond, corpo) */
         case 'F': {
             NoAST *meta  = raiz->esquerda;
             NoAST *resto = raiz->direita;
-            entrarEscopoRT();            /* escopo do for */
-            executar(meta->esquerda);    /* init */
+            entrarEscopoRT();
+            executar(meta->esquerda);
             while (1) {
                 if (resto->esquerda) {
                     Valor cond = avaliar(resto->esquerda);
                     if (!toInt(cond)) break;
                 }
                 entrarEscopoRT();
-                executar(resto->direita);  /* corpo */
+                executar(resto->direita);
                 sairEscopoRT();
-                executar(meta->direita);   /* incr */
+                if (returnSinal.ativo) break;
+                executar(meta->direita);
             }
             sairEscopoRT();
             break;
         }
 
-        /* printf simples: imprime o valor da expressão (forma antiga) */
         case 'P': {
             Valor val = avaliar(raiz->esquerda);
             imprimirValor(val);
@@ -344,14 +381,8 @@ static void executar(NoAST *raiz) {
             break;
         }
 
-        /* printf com string de formato: printf("fmt", arg1, arg2, ...) */
-        /* printf com formato: "R" */
         case 'R': {
             const char *fmt = raiz->esquerda->nome;
-
-            /* a lista de args usa operador 'L', construída ao contrário pelo parser
-               (left-recursive): L(c, L(b, L(a, NULL))) → percorrendo: c,b,a
-               então coletamos em pilha e invertemos para obter a,b,c */
             Valor pilha[32];
             int   np = 0;
             NoAST *cur = raiz->direita;
@@ -364,13 +395,11 @@ static void executar(NoAST *raiz) {
                     break;
                 }
             }
-            /* inverte para ordem de declaração */
             Valor args[32];
-            int   nargs = np;
+            int nargs = np;
             for (int ii = 0; ii < np; ii++)
                 args[ii] = pilha[np - 1 - ii];
 
-            /* percorre a string de formato */
             int ai = 0;
             for (int fi = 0; fmt[fi] != '\0'; fi++) {
                 if (fmt[fi] == '\\') {
@@ -416,8 +445,27 @@ static void executar(NoAST *raiz) {
             break;
         }
 
+        /* ── definição de função: nenhuma execução imediata ──
+           A função já foi registrada na tabsym pela análise semântica. */
+        case 'Z':
+            break;
+
+        /* ── chamada de função como statement ── */
+        case 'C':
+            avaliar(raiz);   /* descarta o valor de retorno */
+            break;
+
+        /* ── return ── */
+        case 'K': {
+            Valor val = { T_VOID, {0} };
+            if (raiz->esquerda)
+                val = avaliar(raiz->esquerda);
+            returnSinal.ativo = 1;
+            returnSinal.valor = val;
+            break;
+        }
+
         default:
-            /* expressão solta (e.g. chamada de função futura) */
             avaliar(raiz);
             break;
     }

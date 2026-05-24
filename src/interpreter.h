@@ -16,17 +16,23 @@ typedef struct Valor {
 
 /* Variável em tempo de execução */
 typedef struct VarRT {
-    char    nome[32];
+    char    nome[64];
     Valor   valor;
     struct VarRT *prox;
 } VarRT;
 
 /* Escopo em tempo de execução */
 typedef struct EscopoRT {
-    VarRT         *vars;
+    VarRT           *vars;
     struct EscopoRT *anterior;
 } EscopoRT;
 
-void        interpretarPrograma(NoAST *raiz);
+/* Sinal de controle de fluxo — usado para propagar 'return' */
+typedef struct {
+    int   ativo;   /* 1 se um return foi executado */
+    Valor valor;   /* valor retornado */
+} ReturnSinal;
+
+void interpretarPrograma(NoAST *raiz);
 
 #endif
