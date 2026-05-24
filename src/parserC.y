@@ -12,6 +12,7 @@
 int  yylex(void);
 void yyerror(const char *s);
 NoAST *root = NULL;
+int   debug = 0;
 
 extern int   linha;
 extern int   coluna;
@@ -69,14 +70,16 @@ programa:
     lista {
         root = $1;
         analisarSemantica(root);
-        imprimirTabela();
+        if (debug) imprimirTabela();
         if (errosSemanticos() > 0) {
-            printf("\n%d erro(s) semantico(s) encontrado(s). TAC nao gerado.\n",
-                   errosSemanticos());
+            fprintf(stderr, "\n%d erro(s) semantico(s) encontrado(s).\n",
+                    errosSemanticos());
         } else {
-            printf("\nTAC do programa:\n");
-            gerarTAC(root);
-            printf("\n");
+            if (debug) {
+                printf("\nTAC do programa:\n");
+                gerarTAC(root);
+                printf("\n");
+            }
             interpretarPrograma(root);
         }
     }
@@ -241,9 +244,26 @@ expressao:
 
 %%
 
-int main(void) {
+int main(int argc, char *argv[]) {
+    extern FILE *yyin;
+
+    for (int i = 1; i < argc; i++) {
+        if (strcmp(argv[i], "-d") == 0 || strcmp(argv[i], "--debug") == 0) {
+            debug = 1;
+        } else {
+            FILE *f = fopen(argv[i], "r");
+            if (f == NULL) {
+                fprintf(stderr, "Erro: nao foi possivel abrir '%s'\n", argv[i]);
+                return 1;
+            }
+            yyin = f;
+        }
+    }
+
     entrarEscopo();
-    return yyparse();
+    int ret = yyparse();
+    if (yyin != stdin) fclose(yyin);
+    return ret;
 }
 
 void yyerror(const char *s) {
