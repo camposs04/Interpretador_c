@@ -3,6 +3,7 @@
 #include "tabsym.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 int linha   = 1;
 int coluna  = 1;
@@ -82,6 +83,17 @@ int  posLinha = 0;
 "{"   { coluna += yyleng; return ABRE_CHAVES; }
 "}"   { coluna += yyleng; return FECHA_CHAVES; }
 ","   { coluna += yyleng; return VIRGULA; }
+
+\"(([^\"\\]|\\.)*)\" {
+    /* string literal — copia sem as aspas externas */
+    int len = yyleng - 2;
+    char *s = malloc(len + 1);
+    strncpy(s, yytext + 1, len);
+    s[len] = '\0';
+    yylval.id = s;
+    coluna += yyleng;
+    return STRING_LITERAL;
+}
 
 ([0-9]+\.[0-9]*|\.[0-9]+) {
     ADD_TEXTO();

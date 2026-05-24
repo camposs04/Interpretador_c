@@ -115,10 +115,26 @@ void analisarSemantica(NoAST *raiz) {
             return;
         }
 
-        /* printf */
+        /* printf simples */
         case 'P':
             analisarSemantica(raiz->esquerda);
             return;
+
+        /* printf com formato — analisa cada argumento */
+        case 'R': {
+            /* esquerda é nó 'S' (string), não precisa análise */
+            NoAST *cur = raiz->direita;
+            while (cur != NULL) {
+                if (cur->operador == 'L') {
+                    analisarSemantica(cur->esquerda);
+                    cur = cur->direita;
+                } else {
+                    analisarSemantica(cur);
+                    break;
+                }
+            }
+            return;
+        }
 
         /* operadores lógicos */
         case 'A': case 'O':
