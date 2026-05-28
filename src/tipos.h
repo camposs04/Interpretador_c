@@ -2,6 +2,10 @@
 #define TIPOS_H
 
 typedef enum {
+    ERR_DIVISAO_POR_ZERO
+} CodigoErro;
+
+typedef enum {
     T_INT,
     T_FLOAT,
     T_CHAR,

@@ -1,7 +1,10 @@
 #include "ast.h"
+#include "semantic.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+extern int yylineno;
 
 /* Aloca e zera um nó — evita campos com lixo de memória */
 static NoAST *alocarNo(void) {
@@ -54,20 +57,98 @@ NoAST *criarNoId(char *nome) {
    por isso adiamos a inferência — o nó fica T_INT por padrão e a semântica
    corrige depois via analisarSemantica(). */
 NoAST *criarNoOp(char operador, NoAST *esq, NoAST *dir) {
-    NoAST *novo = alocarNo();
-    novo->operador  = operador;
-    novo->esquerda  = esq;
-    novo->direita   = dir;
 
-    /* Para ++/--, o nó carrega o operador 'I'/'D' diretamente.
-       O tipo é o do filho esquerdo (ou INT por padrão). */
+    /* ── 1. int × int ── */
+    if (esq->operador == 'n' && dir->operador == 'n'
+        && esq->tipo == T_INT && dir->tipo == T_INT) {
+
+        int a = esq->valor.i, b = dir->valor.i;
+
+        switch (operador) {
+            case '+': return criarNoInt(a + b);
+            case '-': return criarNoInt(a - b);
+            case '*': return criarNoInt(a * b);
+            case '/':
+                if (b == 0) { 
+                    erroSemantico(ERR_DIVISAO_POR_ZERO, yylineno); 
+                    return criarNoInt(0); 
+                }
+                return criarNoInt(a / b);
+            case '%': return criarNoInt(a % b);
+            case '<': return criarNoBool(a <  b);
+            case '>': return criarNoBool(a >  b);
+            case 'e': return criarNoBool(a == b);
+            case '!': return criarNoBool(a != b);
+            case 'L': return criarNoBool(a <= b);
+            case 'G': return criarNoBool(a >= b);
+        }
+    }
+
+    /* ── 2. float × float ── */
+    else if (esq->operador == 'n' && dir->operador == 'n'
+             && esq->tipo == T_FLOAT && dir->tipo == T_FLOAT) {
+
+        float a = esq->valor.f, b = dir->valor.f;
+
+        switch (operador) {
+            case '+': return criarNoFloat(a + b);
+            case '-': return criarNoFloat(a - b);
+            case '*': return criarNoFloat(a * b);
+            case '/':
+                if (b == 0) { 
+                    erroSemantico(ERR_DIVISAO_POR_ZERO, yylineno); 
+                    return criarNoFloat(0);
+                }
+                return criarNoFloat(a / b);
+            case '<': return criarNoBool(a <  b);
+            case '>': return criarNoBool(a >  b);
+            case 'e': return criarNoBool(a == b);
+            case '!': return criarNoBool(a != b);
+            case 'L': return criarNoBool(a <= b);
+            case 'G': return criarNoBool(a >= b);
+        }
+    }
+
+    /* ── 3. misto int+float (promoção para float) ── */
+    else if (esq->operador == 'n' && dir->operador == 'n'
+             && (esq->tipo == T_FLOAT || dir->tipo == T_FLOAT)
+             && (esq->tipo == T_INT   || esq->tipo == T_FLOAT)
+             && (dir->tipo == T_INT   || dir->tipo == T_FLOAT)) {
+
+        float a = (esq->tipo == T_FLOAT) ? esq->valor.f : (float)esq->valor.i;
+        float b = (dir->tipo == T_FLOAT) ? dir->valor.f : (float)dir->valor.i;
+
+        switch (operador) {
+            case '+': return criarNoFloat(a + b);
+            case '-': return criarNoFloat(a - b);
+            case '*': return criarNoFloat(a * b);
+            case '/':
+                if (b == 0) { 
+                    erroSemantico(ERR_DIVISAO_POR_ZERO, yylineno); 
+                    return criarNoFloat(0.0f);
+                }
+                return criarNoFloat(a / b);
+            case '<': return criarNoBool(a <  b);
+            case '>': return criarNoBool(a >  b);
+            case 'e': return criarNoBool(a == b);
+            case '!': return criarNoBool(a != b);
+            case 'L': return criarNoBool(a <= b);
+            case 'G': return criarNoBool(a >= b);
+        }
+    }
+
+    /* ── 4. ao menos um operando não é literal → nó binário normal ── */
+    NoAST *novo = alocarNo();
+    novo->operador = operador;
+    novo->esquerda = esq;
+    novo->direita  = dir;
+
     if (operador == 'I' || operador == 'D') {
         novo->tipo = (esq && esq->operador == 'n' && esq->tipo == T_FLOAT)
                      ? T_FLOAT : T_INT;
         return novo;
     }
 
-    /* Inferência segura: só usa tipo se o nó é literal */
     Tipo te = (esq && esq->operador == 'n') ? esq->tipo : T_INT;
     Tipo td = (dir && dir->operador == 'n') ? dir->tipo : T_INT;
     novo->tipo = (te == T_FLOAT || td == T_FLOAT) ? T_FLOAT : T_INT;

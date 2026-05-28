@@ -8,6 +8,13 @@
 
 static int numErros = 0;
 
+void erroSemantico(int codigoErro, int linha) {
+    numErros++;
+    if (codigoErro == ERR_DIVISAO_POR_ZERO) {
+        printf("Erro Semantico: divisao por zero na linha %d.\n", linha);
+    }
+}
+
 int errosSemanticos(void) { return numErros; }
 
 static const char *tipoStr(Tipo t) {
