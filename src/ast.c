@@ -137,7 +137,57 @@ NoAST *criarNoOp(char operador, NoAST *esq, NoAST *dir) {
         }
     }
 
-    /* ── 4. ao menos um operando não é literal → nó binário normal ── */
+    /* ── 4. identidades algébricas (um operando é literal) ── */
+
+    /* Auxiliares para extrair valor numérico de um literal 'n' */
+    #define LIT_INT(n)   ((n)->operador == 'n' && (n)->tipo == T_INT)
+    #define LIT_FLOAT(n) ((n)->operador == 'n' && (n)->tipo == T_FLOAT)
+    #define LIT_BOOL(n)  ((n)->operador == 'n' && (n)->tipo == T_BOOL)
+    #define VAL_I(n)     ((n)->valor.i)
+    #define VAL_F(n)     ((n)->valor.f)
+
+    if (operador == '+') {
+        /* x + 0  →  x */
+        if (LIT_INT(dir)   && VAL_I(dir) == 0)   return esq;
+        if (LIT_FLOAT(dir) && VAL_F(dir) == 0.0f) return esq;
+        /* 0 + x  →  x */
+        if (LIT_INT(esq)   && VAL_I(esq) == 0)   return dir;
+        if (LIT_FLOAT(esq) && VAL_F(esq) == 0.0f) return dir;
+    }
+
+    if (operador == '-') {
+        /* x - 0  →  x */
+        if (LIT_INT(dir)   && VAL_I(dir) == 0)   return esq;
+        if (LIT_FLOAT(dir) && VAL_F(dir) == 0.0f) return esq;
+    }
+
+    if (operador == '*') {
+        /* x * 1  →  x */
+        if (LIT_INT(dir)   && VAL_I(dir) == 1)   return esq;
+        if (LIT_FLOAT(dir) && VAL_F(dir) == 1.0f) return esq;
+        /* 1 * x  →  x */
+        if (LIT_INT(esq)   && VAL_I(esq) == 1)   return dir;
+        if (LIT_FLOAT(esq) && VAL_F(esq) == 1.0f) return dir;
+        /* x * 0  →  0  (seguro: sem efeitos colaterais no estado atual) */
+        if (LIT_INT(dir)   && VAL_I(dir) == 0)   return criarNoInt(0);
+        if (LIT_FLOAT(dir) && VAL_F(dir) == 0.0f) return criarNoFloat(0.0f);
+        if (LIT_INT(esq)   && VAL_I(esq) == 0)   return criarNoInt(0);
+        if (LIT_FLOAT(esq) && VAL_F(esq) == 0.0f) return criarNoFloat(0.0f);
+    }
+
+    if (operador == '/') {
+        /* x / 1  →  x */
+        if (LIT_INT(dir)   && VAL_I(dir) == 1)   return esq;
+        if (LIT_FLOAT(dir) && VAL_F(dir) == 1.0f) return esq;
+    }
+
+    #undef LIT_INT
+    #undef LIT_FLOAT
+    #undef LIT_BOOL
+    #undef VAL_I
+    #undef VAL_F
+
+    /* ── 5. ao menos um operando não é literal → nó binário normal ── */
     NoAST *novo = alocarNo();
     novo->operador = operador;
     novo->esquerda = esq;
@@ -234,6 +284,15 @@ NoAST *criarNoPrintf(NoAST *expr) {
 
 /* Operadores lógicos: 'A'=&&, 'O'=||, 'N'=! */
 NoAST *criarNoAnd(NoAST *esq, NoAST *dir) {
+    /* identidades && */
+    if (esq->operador == 'n' && esq->tipo == T_BOOL) {
+        if (esq->valor.i == 1) return dir;          /* true  && x  →  x     */
+        if (esq->valor.i == 0) return criarNoBool(0); /* false && x  →  false */
+    }
+    if (dir->operador == 'n' && dir->tipo == T_BOOL) {
+        if (dir->valor.i == 1) return esq;          /* x && true   →  x     */
+        if (dir->valor.i == 0) return criarNoBool(0); /* x && false  →  false */
+    }
     NoAST *novo = alocarNo();
     novo->operador = 'A';
     novo->tipo     = T_BOOL;
@@ -243,6 +302,15 @@ NoAST *criarNoAnd(NoAST *esq, NoAST *dir) {
 }
 
 NoAST *criarNoOr(NoAST *esq, NoAST *dir) {
+    /* identidades || */
+    if (esq->operador == 'n' && esq->tipo == T_BOOL) {
+        if (esq->valor.i == 0) return dir;          /* false || x  →  x    */
+        if (esq->valor.i == 1) return criarNoBool(1); /* true  || x  →  true */
+    }
+    if (dir->operador == 'n' && dir->tipo == T_BOOL) {
+        if (dir->valor.i == 0) return esq;          /* x || false  →  x    */
+        if (dir->valor.i == 1) return criarNoBool(1); /* x || true   →  true */
+    }
     NoAST *novo = alocarNo();
     novo->operador = 'O';
     novo->tipo     = T_BOOL;
@@ -252,6 +320,9 @@ NoAST *criarNoOr(NoAST *esq, NoAST *dir) {
 }
 
 NoAST *criarNoNot(NoAST *operando) {
+    /* dupla negação: !!x  →  x */
+    if (operando->operador == 'N')
+        return operando->esquerda;
     NoAST *novo = alocarNo();
     novo->operador = 'N';
     novo->tipo     = T_BOOL;
