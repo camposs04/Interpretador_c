@@ -475,7 +475,32 @@ static void executar(NoAST *raiz) {
 void interpretarPrograma(NoAST *raiz) {
     entrarEscopoRT();
     if (debug) printf("\n--- EXECUCAO ---\n");
-    executar(raiz);
+
+    executar(raiz); // continua igual — registra funções e executa código global
+
+    // NOVO: busca e chama main() após a passagem global
+    Symb *mainSym = searchSymbol("main");
+    if (mainSym && mainSym->isFuncao) {
+        if (debug) printf("\n--- CHAMANDO main() ---\n");
+        returnSinal.ativo = 0;
+
+        EscopoRT *escopoAntes = escopoAtual;
+        escopoAtual = NULL;
+        entrarEscopoRT();
+
+        executar(mainSym->corpo);
+
+        sairEscopoRT();
+        escopoAtual = escopoAntes;
+
+        if (debug) {
+            printf("\nmain() retornou: ");
+            imprimirValor(returnSinal.valor);
+            printf("\n");
+        }
+        returnSinal.ativo = 0;
+    }
+
     if (debug) printf("--- FIM ---\n");
     sairEscopoRT();
 }
