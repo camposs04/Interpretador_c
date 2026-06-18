@@ -508,3 +508,12 @@ NoAST *criarNoReturn(NoAST *expr) {
     novo->direita  = NULL;
     return novo;
 }
+
+NoAST *criarNoScanf(NoAST *fmt, NoAST *vars) {
+    NoAST *novo = calloc(1, sizeof(NoAST));
+    novo->operador = 'T';
+    novo->tipo     = T_VOID;
+    novo->esquerda = fmt;
+    novo->direita  = vars;
+    return novo;
+}

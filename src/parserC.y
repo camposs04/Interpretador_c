@@ -48,12 +48,12 @@ extern char *yytext;
 %token ADD_EQUAL SUB_EQUAL MULT_EQUAL DIV_EQUAL MOD_EQUAL
 %token AND OR NOT
 %token DEQ NEQ LE GE LT GT
-%token PRINTF SCANF ASPASSIMPLES
+%token PRINTF SCANF ASPASSIMPLES AMP
 
 %type <intValue>  tipo tipo_ret
 %type <ast>  expressao lista elemento comando atribuicao
 %type <ast>  declaracao comandos bloco lista_ids
-%type <ast>  incr_expr args_printf args_chamada def_funcao
+%type <ast>  incr_expr args_printf args_chamada args_scanf def_funcao
 %type <param> params_formais param_formal
 
 /* precedência */
@@ -166,6 +166,12 @@ comando:
 
   | RETURN PONTO_VIRGULA
       { $$ = criarNoReturn(NULL); }
+
+  | SCANF OPEN_PAREN STRING_LITERAL VIRGULA args_scanf CLOSE_PAREN PONTO_VIRGULA
+      { $$ = criarNoScanf(criarNoString($3), $5); free($3); }
+
+  | SCANF OPEN_PAREN STRING_LITERAL CLOSE_PAREN PONTO_VIRGULA
+      { $$ = criarNoScanf(criarNoString($3), NULL); free($3); }
 ;
 
 for_init:

@@ -23,6 +23,7 @@ void   imprimirAST(NoAST *raiz);
 NoAST *criarNoString(const char *texto);
 NoAST *criarNoPrintfFmt(NoAST *fmt, NoAST *args);
 NoAST *criarListaArgs(NoAST *arg, NoAST *resto);
+NoAST *criarNoScanf(NoAST *fmt, NoAST *vars);
 
 /* ── funções ── */
 /* 'Z' = definição de função

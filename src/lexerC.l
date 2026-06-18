@@ -124,6 +124,8 @@ int  posLinha = 0;
     return CHAR_NUM;
 }
 
+"&"  { coluna += yyleng; return AMP; }
+
 . {
     printf("ERROR LEXER\n");
     printf("Line: %d Column: %d | error: invalid character '%s'\n", linha, coluna, yytext);

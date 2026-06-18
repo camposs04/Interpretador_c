@@ -450,6 +450,73 @@ static void executar(NoAST *raiz) {
         case 'Z':
             break;
 
+        /* ── scanf ── */
+        case 'T': {
+            const char *fmt = raiz->esquerda->nome;
+
+            /* Abre /dev/tty para ler do terminal mesmo com stdin redirecionado */
+            FILE *tty = fopen("/dev/tty", "r");
+            if (!tty) tty = stdin;
+
+            /* Coleta variáveis na ordem de declaração (lista 'L' invertida) */
+            const char *pilha[32];
+            int np = 0;
+            NoAST *cur = raiz->direita;
+            while (cur != NULL && np < 32) {
+                if (cur->operador == 'L') {
+                    pilha[np++] = cur->esquerda->nome;
+                    cur = cur->direita;
+                } else {
+                    pilha[np++] = cur->nome;
+                    break;
+                }
+            }
+            /* Inverte para ordem correta */
+            const char *vars[32];
+            int nvars = np;
+            for (int ii = 0; ii < np; ii++)
+                vars[ii] = pilha[np - 1 - ii];
+
+            int vi = 0;
+            for (int fi = 0; fmt[fi] != '\0' && vi < nvars; fi++) {
+                if (fmt[fi] != '%') continue;
+                fi++;
+                VarRT *v = buscarVar(vars[vi++]);
+                if (!v) { fprintf(stderr, "Erro RT: variavel nao encontrada no scanf.\n"); continue; }
+                switch (fmt[fi]) {
+                    case 'd': case 'i': {
+                        int tmp;
+                        if (fscanf(tty, "%d", &tmp) == 1) {
+                            v->valor.tipo   = T_INT;
+                            v->valor.dado.i = tmp;
+                        }
+                        break;
+                    }
+                    case 'f': {
+                        float tmp;
+                        if (fscanf(tty, "%f", &tmp) == 1) {
+                            v->valor.tipo   = T_FLOAT;
+                            v->valor.dado.f = tmp;
+                        }
+                        break;
+                    }
+                    case 'c': {
+                        char tmp;
+                        if (fscanf(tty, " %c", &tmp) == 1) {
+                            v->valor.tipo   = T_CHAR;
+                            v->valor.dado.c = tmp;
+                        }
+                        break;
+                    }
+                    default:
+                        fprintf(stderr, "Aviso: especificador '%%%c' nao suportado no scanf.\n", fmt[fi]);
+                        break;
+                }
+            }
+            if (tty != stdin) fclose(tty);
+            break;
+        }
+
         /* ── chamada de função como statement ── */
         case 'C':
             avaliar(raiz);   /* descarta o valor de retorno */
