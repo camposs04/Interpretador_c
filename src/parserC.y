@@ -203,6 +203,19 @@ args_chamada:
         { $$ = criarListaArgs($3, $1); }
 ;
 
+/* argumentos do scanf — aceita &var (C real) ou var (simplificado) */
+args_scanf:
+    AMP ID
+        { $$ = criarListaArgs(criarNoId($2), NULL); free($2); }
+  | ID
+        { $$ = criarListaArgs(criarNoId($1), NULL); free($1); }
+  | args_scanf VIRGULA AMP ID
+        { $$ = criarListaArgs(criarNoId($4), $1); free($4); }
+  | args_scanf VIRGULA ID
+        { $$ = criarListaArgs(criarNoId($3), $1); free($3); }
+;
+
+
 tipo:
     INT   { $$ = T_INT; }
   | FLOAT { $$ = T_FLOAT; }
