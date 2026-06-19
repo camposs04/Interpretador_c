@@ -3,6 +3,13 @@
 ## Sobre o Projeto
 Este repositório contém o desenvolvimento de um **interpretador da linguagem C**, criado como trabalho em equipe para a disciplina de Compiladores 1 da Universidade de Brasília (UnB).
 
+## Participantes
+
+|            Nome           | Matrícula | 
+|---------------------------|-----------|
+|José Joaquim da Silva Neto | 232027510 |
+
+
 # Estrutura do Projeto
 
 ```
@@ -12,7 +19,15 @@ InterpretadorC/
 │   ├── parserC.y
 │   ├── ast.c
 │   ├── ast.h
-│   └── tipos.h  
+│   ├── tipos.h
+│   ├── interpreter.c
+│   ├── interpreter.h
+│   ├── semantic.c
+│   ├── semantic.h
+│   ├── tabsym.c
+│   ├── tabsym.h
+│   ├── tac.c
+│   └── tac.h  
 ├── docs
 │   ├── grammar.md
 │   ├── lexer.md
@@ -20,10 +35,18 @@ InterpretadorC/
 │   └── semantic.md
 ├── testes
 │   ├── overview.md
+│   ├── testeAtribuicao.c
 │   ├── testeDeclaracoes.C
 │   ├── testeErros.c
 │   ├── testeEscopo.c
-│   └── testeExpressaoInt.c
+│   ├── testeExpressaoInt.c
+│   ├── testeFuncoes.c
+│   ├── testeif.c
+│   ├── testeMain01.c
+│   ├── testeMainLoop.c
+│   ├── testePrintf.c
+│   ├── testeScanf.c
+│   └── testeSimples.c
 ├── makefile
 ├── .gitignore
 └── README.md
