@@ -18,6 +18,9 @@ typedef struct Valor {
 typedef struct VarRT {
     char    nome[64];
     Valor   valor;
+    int     isVetor;  /* 1 se esta variável é um vetor */
+    int     tamanho;  /* número de elementos (apenas vetores) */
+    Valor  *vetor;    /* dados do vetor, alocados dinamicamente (apenas vetores) */
     struct VarRT *prox;
 } VarRT;
 

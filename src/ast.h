@@ -27,6 +27,25 @@ NoAST *criarListaArgs(NoAST *arg, NoAST *resto);
 NoAST *criarNoScanf(NoAST *fmt, NoAST *vars);
 NoAST *criarNoBreak(void);
 
+/* ── vetores ── */
+/* 'V' = declaração de vetor
+   nome     = nome do vetor
+   tipo     = tipo do elemento
+   valor.i  = tamanho (número de elementos)
+   direita  = lista de valores iniciais ('L'/'criarListaArgs') ou NULL */
+NoAST *criarNoDeclVetor(Tipo tipo, const char *nome, int tamanho, NoAST *valoresIniciais);
+
+/* 'X' = acesso de leitura a um elemento do vetor (usado como expressão)
+   nome     = nome do vetor
+   esquerda = expressão do índice */
+NoAST *criarNoVetorAcesso(const char *nome, NoAST *indice);
+
+/* 'Y' = atribuição a um elemento do vetor (vetor[i] = valor;)
+   nome     = nome do vetor
+   esquerda = expressão do índice
+   direita  = expressão do valor a atribuir */
+NoAST *criarNoVetorAtrib(const char *nome, NoAST *indice, NoAST *valor);
+
 /* ── funções ── */
 /* 'Z' = definição de função
    nome  = nome da função

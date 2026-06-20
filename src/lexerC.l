@@ -83,6 +83,8 @@ int  posLinha = 0;
 ")"   { coluna += yyleng; return CLOSE_PAREN; }
 "{"   { coluna += yyleng; return ABRE_CHAVES; }
 "}"   { coluna += yyleng; return FECHA_CHAVES; }
+"["   { coluna += yyleng; return ABRE_COLCHETE; }
+"]"   { coluna += yyleng; return FECHA_COLCHETE; }
 ","   { coluna += yyleng; return VIRGULA; }
 
 \"(([^\"\\]|\\.)*)\" {

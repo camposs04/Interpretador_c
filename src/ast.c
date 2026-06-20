@@ -551,3 +551,34 @@ NoAST *criarNoBreak(void) {
     novo->tipo     = T_VOID;
     return novo;
 }
+
+/* ── vetores ── */
+NoAST *criarNoDeclVetor(Tipo tipo, const char *nome, int tamanho, NoAST *valoresIniciais) {
+    NoAST *novo = calloc(1, sizeof(NoAST));
+    novo->operador = 'V';
+    novo->tipo     = tipo;
+    strncpy(novo->nome, nome, 255);
+    novo->nome[255] = '\0';
+    novo->valor.i   = tamanho;
+    novo->direita   = valoresIniciais;
+    return novo;
+}
+
+NoAST *criarNoVetorAcesso(const char *nome, NoAST *indice) {
+    NoAST *novo = calloc(1, sizeof(NoAST));
+    novo->operador = 'X';
+    strncpy(novo->nome, nome, 255);
+    novo->nome[255] = '\0';
+    novo->esquerda  = indice;
+    return novo;
+}
+
+NoAST *criarNoVetorAtrib(const char *nome, NoAST *indice, NoAST *valor) {
+    NoAST *novo = calloc(1, sizeof(NoAST));
+    novo->operador = 'Y';
+    strncpy(novo->nome, nome, 255);
+    novo->nome[255] = '\0';
+    novo->esquerda  = indice;
+    novo->direita   = valor;
+    return novo;
+}

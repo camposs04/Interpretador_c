@@ -49,6 +49,15 @@ char *gerarTAC(NoAST *raiz) {
             return t;
         }
 
+        /* leitura de elemento de vetor */
+        case 'X': {
+            char *idx = gerarTAC(raiz->esquerda);
+            char *t   = novoTemp();
+            printf("%s = %s[%s]\n", t, raiz->nome, idx);
+            liberarTemp(idx);
+            return t;
+        }
+
         case 'd': {
             const char *tipo_str;
             switch (raiz->tipo) {
@@ -64,6 +73,41 @@ char *gerarTAC(NoAST *raiz) {
                 printf("%s = %s\n", raiz->esquerda->nome, val);
                 liberarTemp(val);
             }
+            return NULL;
+        }
+
+        /* declaração de vetor */
+        case 'V': {
+            printf("decl_vetor %s[%d]\n", raiz->nome, raiz->valor.i);
+            if (raiz->direita) {
+                char *pilha[256];
+                int   np = 0;
+                NoAST *cur = raiz->direita;
+                while (cur != NULL && np < 256) {
+                    if (cur->operador == 'L') {
+                        pilha[np++] = gerarTAC(cur->esquerda);
+                        cur = cur->direita;
+                    } else {
+                        pilha[np++] = gerarTAC(cur);
+                        break;
+                    }
+                }
+                for (int i = 0; i < np; i++) {
+                    int idx = np - 1 - i;
+                    printf("%s[%d] = %s\n", raiz->nome, idx, pilha[i]);
+                    liberarTemp(pilha[i]);
+                }
+            }
+            return NULL;
+        }
+
+        /* atribuição a elemento de vetor */
+        case 'Y': {
+            char *idx = gerarTAC(raiz->esquerda);
+            char *val = gerarTAC(raiz->direita);
+            printf("%s[%s] = %s\n", raiz->nome, idx, val);
+            liberarTemp(idx);
+            liberarTemp(val);
             return NULL;
         }
 

@@ -43,6 +43,7 @@ extern char *yytext;
 %token INT FLOAT CHAR BOOL
 %token EQUAL PONTO_VIRGULA VIRGULA
 %token OPEN_PAREN CLOSE_PAREN ABRE_CHAVES FECHA_CHAVES
+%token ABRE_COLCHETE FECHA_COLCHETE
 %token PLUS MINUS MULT DIV MOD
 %token INCREMENT DECREMENT
 %token ADD_EQUAL SUB_EQUAL MULT_EQUAL DIV_EQUAL MOD_EQUAL
@@ -54,6 +55,7 @@ extern char *yytext;
 %type <ast>  expressao lista elemento comando atribuicao
 %type <ast>  declaracao comandos bloco lista_ids
 %type <ast>  incr_expr args_printf args_chamada args_scanf def_funcao
+%type <ast>  lista_valores
 %type <param> params_formais param_formal
 
 /* precedência */
@@ -248,6 +250,17 @@ declaracao:
             }
         }
     }
+  | tipo ID ABRE_COLCHETE INT_NUM FECHA_COLCHETE PONTO_VIRGULA
+      { $$ = criarNoDeclVetor($1, $2, $4, NULL); free($2); }
+  | tipo ID ABRE_COLCHETE INT_NUM FECHA_COLCHETE EQUAL ABRE_CHAVES lista_valores FECHA_CHAVES PONTO_VIRGULA
+      { $$ = criarNoDeclVetor($1, $2, $4, $8); free($2); }
+;
+
+lista_valores:
+    expressao
+        { $$ = criarListaArgs($1, NULL); }
+  | lista_valores VIRGULA expressao
+        { $$ = criarListaArgs($3, $1); }
 ;
 
 lista_ids:
@@ -273,6 +286,8 @@ atribuicao:
   | ID INCREMENT PONTO_VIRGULA            { $$ = criarNoOp('I', criarNoId($1), NULL); }
   | ID DECREMENT PONTO_VIRGULA            { $$ = criarNoOp('D', criarNoId($1), NULL); }
   | ID EQUAL error PONTO_VIRGULA          { yyerrok; $$ = NULL; }
+  | ID ABRE_COLCHETE expressao FECHA_COLCHETE EQUAL expressao PONTO_VIRGULA
+      { $$ = criarNoVetorAtrib($1, $3, $6); free($1); }
 ;
 
 expressao:
@@ -300,6 +315,8 @@ expressao:
       { $$ = criarNoChamada($1, $3); free($1); }
   | ID OPEN_PAREN CLOSE_PAREN
       { $$ = criarNoChamada($1, NULL); free($1); }
+  | ID ABRE_COLCHETE expressao FECHA_COLCHETE
+      { $$ = criarNoVetorAcesso($1, $3); free($1); }
   | ID         { $$ = criarNoId($1); }
 ;
 

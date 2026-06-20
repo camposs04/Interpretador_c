@@ -27,7 +27,7 @@ static void entrarEscopoRT(void) {
 static void sairEscopoRT(void) {
     if (escopoAtual == NULL) return;
     VarRT *v = escopoAtual->vars;
-    while (v) { VarRT *p = v->prox; free(v); v = p; }
+    while (v) { VarRT *p = v->prox; if (v->vetor) free(v->vetor); free(v); v = p; }
     EscopoRT *ant = escopoAtual->anterior;
     free(escopoAtual);
     escopoAtual = ant;
@@ -47,6 +47,22 @@ static VarRT *declararVar(const char *nome, Tipo tipo) {
     v->valor.tipo   = tipo;
     v->valor.dado.i = 0;
     v->prox         = escopoAtual->vars;
+    escopoAtual->vars = v;
+    return v;
+}
+
+static VarRT *declararVetor(const char *nome, Tipo tipoElemento, int tamanho) {
+    VarRT *v = calloc(1, sizeof(VarRT));
+    strncpy(v->nome, nome, 63);
+    v->valor.tipo = tipoElemento;
+    v->isVetor    = 1;
+    v->tamanho    = tamanho;
+    v->vetor      = calloc(tamanho, sizeof(Valor));
+    for (int i = 0; i < tamanho; i++) {
+        v->vetor[i].tipo   = tipoElemento;
+        v->vetor[i].dado.i = 0;
+    }
+    v->prox           = escopoAtual->vars;
     escopoAtual->vars = v;
     return v;
 }
@@ -122,6 +138,21 @@ static Valor avaliar(NoAST *raiz) {
                 return resultado;
             }
             return v->valor;
+        }
+
+        case 'X': {
+            VarRT *v = buscarVar(raiz->nome);
+            if (!v || !v->isVetor) {
+                printf("Erro RT: vetor '%s' nao encontrado.\n", raiz->nome);
+                return resultado;
+            }
+            int idx = toInt(avaliar(raiz->esquerda));
+            if (idx < 0 || idx >= v->tamanho) {
+                printf("Erro RT: indice %d fora dos limites de '%s' (tamanho %d).\n",
+                       idx, raiz->nome, v->tamanho);
+                return resultado;
+            }
+            return v->vetor[idx];
         }
 
         case 'A': {
@@ -282,6 +313,52 @@ static void executar(NoAST *raiz) {
                 Valor val = avaliar(raiz->direita);
                 v->valor  = converterPara(val, raiz->tipo);
             }
+            break;
+        }
+
+        /* ── declaração de vetor ── */
+        case 'V': {
+            VarRT *v = declararVetor(raiz->nome, raiz->tipo, raiz->valor.i);
+
+            if (raiz->direita) {
+                /* coleta os valores iniciais (lista 'L' invertida, mesmo
+                   padrão usado em printf/scanf/chamadas) */
+                Valor pilha[256];
+                int   np = 0;
+                NoAST *cur = raiz->direita;
+                while (cur != NULL && np < 256) {
+                    if (cur->operador == 'L') {
+                        pilha[np++] = avaliar(cur->esquerda);
+                        cur = cur->direita;
+                    } else {
+                        pilha[np++] = avaliar(cur);
+                        break;
+                    }
+                }
+                for (int i = 0; i < np; i++) {
+                    int idx = np - 1 - i; /* desfaz a inversão da lista */
+                    if (idx < v->tamanho)
+                        v->vetor[idx] = converterPara(pilha[i], raiz->tipo);
+                }
+            }
+            break;
+        }
+
+        /* ── atribuição a elemento de vetor ── */
+        case 'Y': {
+            VarRT *v = buscarVar(raiz->nome);
+            if (!v || !v->isVetor) {
+                printf("Erro RT: vetor '%s' nao encontrado.\n", raiz->nome);
+                break;
+            }
+            int idx = toInt(avaliar(raiz->esquerda));
+            if (idx < 0 || idx >= v->tamanho) {
+                printf("Erro RT: indice %d fora dos limites de '%s' (tamanho %d).\n",
+                       idx, raiz->nome, v->tamanho);
+                break;
+            }
+            Valor val = avaliar(raiz->direita);
+            v->vetor[idx] = converterPara(val, v->valor.tipo);
             break;
         }
 

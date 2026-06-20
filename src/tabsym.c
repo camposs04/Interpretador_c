@@ -121,3 +121,18 @@ void insertFuncao(const char *name, Tipo retorno, Param *params, struct noAST *c
     novo->next     = escopoAtual->tabela[i];
     escopoAtual->tabela[i] = novo;
 }
+
+void insertVetor(const char *name, const char *type, int tamanho) {
+    if (escopoAtual == NULL) {
+        printf("Erro interno: nenhum escopo ativo.\n");
+        return;
+    }
+    unsigned int i = hash(name);
+    Symb *novo     = calloc(1, sizeof(Symb));
+    novo->name     = strdup(name);
+    novo->type     = strdup(type);
+    novo->isVetor  = 1;
+    novo->tamanho  = tamanho;
+    novo->next     = escopoAtual->tabela[i];
+    escopoAtual->tabela[i] = novo;
+}

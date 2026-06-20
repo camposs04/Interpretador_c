@@ -83,9 +83,83 @@ void analisarSemantica(NoAST *raiz) {
             declaration(raiz);
             return;
 
+        /* ── declaração de vetor ── */
+        case 'V': {
+            const char *tipo_str = tipoStr(raiz->tipo);
+
+            if (searchSymbolEscopoAtual(raiz->nome) != NULL) {
+                printf("Erro Semantico: variavel '%s' ja declarada neste escopo.\n", raiz->nome);
+                numErros++;
+                return;
+            }
+            if (raiz->valor.i <= 0) {
+                printf("Erro Semantico: vetor '%s' deve ter tamanho positivo.\n", raiz->nome);
+                numErros++;
+                return;
+            }
+            insertVetor(raiz->nome, tipo_str, raiz->valor.i);
+
+            /* Verifica a lista de valores iniciais, se houver */
+            if (raiz->direita) {
+                int nvalores = 0;
+                NoAST *cur = raiz->direita;
+                while (cur != NULL) {
+                    if (cur->operador == 'L') {
+                        analisarSemantica(cur->esquerda);
+                        verificarNaoVoid(cur->esquerda);
+                        nvalores++;
+                        cur = cur->direita;
+                    } else {
+                        analisarSemantica(cur);
+                        verificarNaoVoid(cur);
+                        nvalores++;
+                        break;
+                    }
+                }
+                if (nvalores > raiz->valor.i) {
+                    printf("Erro Semantico: vetor '%s' tem %d valor(es) inicial(is) para %d posicao(oes).\n",
+                           raiz->nome, nvalores, raiz->valor.i);
+                    numErros++;
+                }
+            }
+            return;
+        }
+
         case 'i':
             identifier(raiz);
             return;
+
+        /* ── acesso de leitura a vetor (vetor[i]) ── */
+        case 'X': {
+            Symb *s = searchSymbol(raiz->nome);
+            if (!s || !s->isVetor) {
+                printf("Erro Semantico: '%s' nao e um vetor declarado.\n", raiz->nome);
+                numErros++;
+                return;
+            }
+            analisarSemantica(raiz->esquerda); /* índice */
+            verificarNaoVoid(raiz->esquerda);
+            if      (strcmp(s->type,"int")   == 0) raiz->tipo = T_INT;
+            else if (strcmp(s->type,"float") == 0) raiz->tipo = T_FLOAT;
+            else if (strcmp(s->type,"char")  == 0) raiz->tipo = T_CHAR;
+            else if (strcmp(s->type,"bool")  == 0) raiz->tipo = T_BOOL;
+            return;
+        }
+
+        /* ── atribuição a elemento de vetor (vetor[i] = valor;) ── */
+        case 'Y': {
+            Symb *s = searchSymbol(raiz->nome);
+            if (!s || !s->isVetor) {
+                printf("Erro Semantico: '%s' nao e um vetor declarado.\n", raiz->nome);
+                numErros++;
+                return;
+            }
+            analisarSemantica(raiz->esquerda); /* índice */
+            analisarSemantica(raiz->direita);  /* valor */
+            verificarNaoVoid(raiz->esquerda);
+            verificarNaoVoid(raiz->direita);
+            return;
+        }
 
         /* atribuição e operadores compostos */
         case '=':
@@ -143,6 +217,14 @@ void analisarSemantica(NoAST *raiz) {
             sairEscopo();
             return;
         }
+
+        /* ── break ── */
+        case 'B':
+            if (profundidadeLaco == 0) {
+                printf("Erro Semantico: 'break' usado fora de um laco.\n");
+                numErros++;
+            }
+            return;
 
         case 'P':
             analisarSemantica(raiz->esquerda);
@@ -277,14 +359,6 @@ void analisarSemantica(NoAST *raiz) {
                            tipoStr(tipoFuncaoAtual));
                     numErros++;
                 }
-            }
-            return;
-
-        /* ── break ── */
-        case 'B':
-            if (profundidadeLaco == 0) {
-                printf("Erro Semantico: 'break' usado fora de um laco.\n");
-                numErros++;
             }
             return;
 

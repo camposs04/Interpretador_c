@@ -12,6 +12,8 @@ typedef struct Symb {
     int          isFuncao;
     Param       *params;     /* lista de parâmetros formais (apenas funções) */
     struct noAST *corpo;     /* AST do corpo (apenas funções) */
+    int          isVetor;    /* 1 se este símbolo é um vetor */
+    int          tamanho;    /* número de elementos (apenas vetores) */
     struct Symb  *next;
 } Symb;
 
@@ -23,6 +25,7 @@ typedef struct Escopo {
 void  entrarEscopo(void);
 void  sairEscopo(void);
 void  insertSymbol(const char *name, const char *type);
+void  insertVetor(const char *name, const char *type, int tamanho);
 void  insertFuncao(const char *name, Tipo retorno, Param *params, struct noAST *corpo);
 Symb *searchSymbol(const char *name);
 Symb *searchSymbolEscopoAtual(const char *name);
