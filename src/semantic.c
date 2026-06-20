@@ -7,6 +7,9 @@
 #include "semantic.h"
 
 static int numErros = 0;
+static int profundidadeLaco = 0;
+static Tipo tipoFuncaoAtual = T_VOID;
+static int dentroDeFuncao = 0;
 
 void erroSemantico(int codigoErro, int linha) {
     numErros++;
@@ -28,6 +31,19 @@ static const char *tipoStr(Tipo t) {
     }
 }
 
+/* Detecta o uso do retorno de uma função void como se fosse um valor
+   (ex.: "x = minhaFuncaoVoid();", "1 + minhaFuncaoVoid()"). Deve ser chamada
+   APÓS a expressão já ter sido analisada (para s->retorno já estar resolvido). */
+static void verificarNaoVoid(NoAST *expr) {
+    if (expr == NULL || expr->operador != 'C') return;
+    Symb *s = searchSymbol(expr->nome);
+    if (s && s->isFuncao && s->retorno == T_VOID) {
+        printf("Erro Semantico: funcao '%s' tem retorno void e nao pode ser usada como valor.\n",
+               expr->nome);
+        numErros++;
+    }
+}
+
 static void declaration(NoAST *raiz) {
     const char *nome     = raiz->esquerda->nome;
     const char *tipo_str = tipoStr(raiz->tipo);
@@ -39,7 +55,10 @@ static void declaration(NoAST *raiz) {
         insertSymbol(nome, tipo_str);
     }
 
-    if (raiz->direita) analisarSemantica(raiz->direita);
+    if (raiz->direita) {
+        analisarSemantica(raiz->direita);
+        verificarNaoVoid(raiz->direita);
+    }
 }
 
 static void identifier(NoAST *raiz) {
@@ -73,6 +92,7 @@ void analisarSemantica(NoAST *raiz) {
         case 'a': case 's': case 'm': case 'v': case 'r':
             analisarSemantica(raiz->esquerda);
             analisarSemantica(raiz->direita);
+            verificarNaoVoid(raiz->direita);
             return;
 
         case 'I': case 'D':
@@ -102,7 +122,9 @@ void analisarSemantica(NoAST *raiz) {
         case 'W':
             analisarSemantica(raiz->esquerda);
             entrarEscopo();
+            profundidadeLaco++;
             analisarSemantica(raiz->direita);
+            profundidadeLaco--;
             sairEscopo();
             return;
 
@@ -114,7 +136,9 @@ void analisarSemantica(NoAST *raiz) {
             analisarSemantica(resto->esquerda);
             analisarSemantica(meta->direita);
             entrarEscopo();
+            profundidadeLaco++;
             analisarSemantica(resto->direita);
+            profundidadeLaco--;
             sairEscopo();
             sairEscopo();
             return;
@@ -122,6 +146,7 @@ void analisarSemantica(NoAST *raiz) {
 
         case 'P':
             analisarSemantica(raiz->esquerda);
+            verificarNaoVoid(raiz->esquerda);
             return;
 
         case 'R': {
@@ -129,9 +154,11 @@ void analisarSemantica(NoAST *raiz) {
             while (cur != NULL) {
                 if (cur->operador == 'L') {
                     analisarSemantica(cur->esquerda);
+                    verificarNaoVoid(cur->esquerda);
                     cur = cur->direita;
                 } else {
                     analisarSemantica(cur);
+                    verificarNaoVoid(cur);
                     break;
                 }
             }
@@ -149,6 +176,11 @@ void analisarSemantica(NoAST *raiz) {
             raiz->tipo = T_BOOL;
             return;
 
+        case 'u':
+            analisarSemantica(raiz->esquerda);
+            raiz->tipo = raiz->esquerda->tipo;
+            return;
+
         /* ── definição de função ── */
         case 'Z': {
             /* Registra a função no escopo global antes de analisar o corpo,
@@ -164,7 +196,20 @@ void analisarSemantica(NoAST *raiz) {
             entrarEscopo();
             for (Param *p = raiz->params; p != NULL; p = p->prox)
                 insertSymbol(p->nome, tipoStr(p->tipo));
+
+            /* Salva contexto da função externa (suporta funções aninhadas,
+               mesmo que a gramática atual não as produza) para checar os
+               'return' do corpo contra o tipo de retorno declarado. */
+            Tipo tipoAnterior   = tipoFuncaoAtual;
+            int  dentroAnterior = dentroDeFuncao;
+            tipoFuncaoAtual  = raiz->tipo;
+            dentroDeFuncao   = 1;
+
             analisarSemantica(raiz->esquerda);
+
+            tipoFuncaoAtual = tipoAnterior;
+            dentroDeFuncao  = dentroAnterior;
+
             sairEscopo();
             return;
         }
@@ -200,9 +245,11 @@ void analisarSemantica(NoAST *raiz) {
             while (cur != NULL) {
                 if (cur->operador == 'L') {
                     analisarSemantica(cur->esquerda);
+                    verificarNaoVoid(cur->esquerda);
                     cur = cur->direita;
                 } else {
                     analisarSemantica(cur);
+                    verificarNaoVoid(cur);
                     break;
                 }
             }
@@ -212,11 +259,40 @@ void analisarSemantica(NoAST *raiz) {
         /* ── return ── */
         case 'K':
             analisarSemantica(raiz->esquerda);
+            verificarNaoVoid(raiz->esquerda);
+
+            if (!dentroDeFuncao) {
+                /* return no nível global: sem tipo de função pra validar,
+                   apenas deixa passar (comportamento já existente). */
+                return;
+            }
+            if (tipoFuncaoAtual == T_VOID) {
+                if (raiz->esquerda != NULL) {
+                    printf("Erro Semantico: funcao void nao pode retornar um valor.\n");
+                    numErros++;
+                }
+            } else {
+                if (raiz->esquerda == NULL) {
+                    printf("Erro Semantico: funcao do tipo '%s' deve retornar um valor.\n",
+                           tipoStr(tipoFuncaoAtual));
+                    numErros++;
+                }
+            }
+            return;
+
+        /* ── break ── */
+        case 'B':
+            if (profundidadeLaco == 0) {
+                printf("Erro Semantico: 'break' usado fora de um laco.\n");
+                numErros++;
+            }
             return;
 
         default:
             analisarSemantica(raiz->esquerda);
             analisarSemantica(raiz->direita);
+            verificarNaoVoid(raiz->esquerda);
+            verificarNaoVoid(raiz->direita);
             if (raiz->esquerda && raiz->direita) {
                 Tipo te = raiz->esquerda->tipo;
                 Tipo td = raiz->direita->tipo;

@@ -14,6 +14,9 @@ static EscopoRT *escopoAtual = NULL;
 /* Sinal global de return — propagado até o chamador da função */
 static ReturnSinal returnSinal = {0, {T_VOID, {0}}};
 
+/* Sinal global de break — propagado até o laço mais próximo, onde é consumido */
+static int breakSinal = 0;
+
 static void entrarEscopoRT(void) {
     EscopoRT *novo = malloc(sizeof(EscopoRT));
     novo->vars     = NULL;
@@ -144,6 +147,18 @@ static Valor avaliar(NoAST *raiz) {
             return resultado;
         }
 
+        case 'u': {
+            Valor op = avaliar(raiz->esquerda);
+            if (op.tipo == T_FLOAT) {
+                resultado.tipo   = T_FLOAT;
+                resultado.dado.f = -op.dado.f;
+            } else {
+                resultado.tipo   = T_INT;
+                resultado.dado.i = -toInt(op);
+            }
+            return resultado;
+        }
+
         /* ── chamada de função como expressão ── */
         case 'C': {
             Symb *s = searchSymbol(raiz->nome);
@@ -184,9 +199,10 @@ static Valor avaliar(NoAST *raiz) {
                     var->valor = converterPara(args[ai], p->tipo);
             }
 
-            /* Reseta sinal de retorno e executa o corpo */
+            /* Reseta sinais de retorno/break e executa o corpo */
             returnSinal.ativo   = 0;
             returnSinal.valor   = resultado;
+            breakSinal          = 0;
             executar(s->corpo);
             Valor retVal = returnSinal.valor;
 
@@ -194,6 +210,7 @@ static Valor avaliar(NoAST *raiz) {
             sairEscopoRT();
             escopoAtual = escopoAntes;
             returnSinal.ativo = 0;
+            breakSinal        = 0;
 
             /* Converte para tipo de retorno da função */
             if (s->retorno != T_VOID)
@@ -248,8 +265,8 @@ static Valor avaliar(NoAST *raiz) {
 /* ── execução de comandos ── */
 static void executar(NoAST *raiz) {
     if (raiz == NULL) return;
-    /* Para de executar quando um return foi disparado */
-    if (returnSinal.ativo) return;
+    /* Para de executar quando um return ou break foi disparado */
+    if (returnSinal.ativo || breakSinal) return;
 
     switch (raiz->operador) {
 
@@ -350,6 +367,7 @@ static void executar(NoAST *raiz) {
                 executar(raiz->direita);
                 sairEscopoRT();
                 if (returnSinal.ativo) break;
+                if (breakSinal) { breakSinal = 0; break; }
             }
             break;
         }
@@ -368,6 +386,7 @@ static void executar(NoAST *raiz) {
                 executar(resto->direita);
                 sairEscopoRT();
                 if (returnSinal.ativo) break;
+                if (breakSinal) { breakSinal = 0; break; }
                 executar(meta->direita);
             }
             sairEscopoRT();
@@ -448,6 +467,11 @@ static void executar(NoAST *raiz) {
         /* ── definição de função: nenhuma execução imediata ──
            A função já foi registrada na tabsym pela análise semântica. */
         case 'Z':
+            break;
+
+        /* ── break ── */
+        case 'B':
+            breakSinal = 1;
             break;
 
         /* ── scanf ── */

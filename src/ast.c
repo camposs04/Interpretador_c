@@ -330,6 +330,29 @@ NoAST *criarNoNot(NoAST *operando) {
     return novo;
 }
 
+/* ── menos unário ── */
+NoAST *criarNoNeg(NoAST *operando) {
+    /* dupla negação aritmética: -(-x)  →  x */
+    if (operando->operador == 'u')
+        return operando->esquerda;
+
+    /* constant folding: literal numérico conhecido em tempo de "compilação" */
+    if (operando->operador == 'n') {
+        switch (operando->tipo) {
+            case T_INT:   return criarNoInt(-operando->valor.i);
+            case T_FLOAT: return criarNoFloat(-operando->valor.f);
+            default: break; /* char/bool não fazem sentido negados; cai no caso geral */
+        }
+    }
+
+    NoAST *novo = alocarNo();
+    novo->operador = 'u';
+    novo->tipo     = T_INT; /* tipo real definido pela análise semântica (igual aos outros operadores) */
+    novo->esquerda = operando;
+    novo->direita  = NULL;
+    return novo;
+}
+
 /* ── impressão da AST ── */
 void imprimirAST(NoAST *raiz) {
     if (raiz == NULL) return;
@@ -406,6 +429,9 @@ void imprimirAST(NoAST *raiz) {
             break;
         case 'N':
             printf("!"); imprimirAST(raiz->esquerda);
+            break;
+        case 'u':
+            printf("-"); imprimirAST(raiz->esquerda);
             break;
         default:
             printf("("); imprimirAST(raiz->esquerda);
@@ -515,5 +541,13 @@ NoAST *criarNoScanf(NoAST *fmt, NoAST *vars) {
     novo->tipo     = T_VOID;
     novo->esquerda = fmt;
     novo->direita  = vars;
+    return novo;
+}
+
+/* ── break ── */
+NoAST *criarNoBreak(void) {
+    NoAST *novo = calloc(1, sizeof(NoAST));
+    novo->operador = 'B';
+    novo->tipo     = T_VOID;
     return novo;
 }

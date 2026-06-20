@@ -19,11 +19,13 @@ NoAST *criarNoPrintf(NoAST *expr);
 NoAST *criarNoAnd(NoAST *esq, NoAST *dir);
 NoAST *criarNoOr(NoAST *esq, NoAST *dir);
 NoAST *criarNoNot(NoAST *operando);
+NoAST *criarNoNeg(NoAST *operando);
 void   imprimirAST(NoAST *raiz);
 NoAST *criarNoString(const char *texto);
 NoAST *criarNoPrintfFmt(NoAST *fmt, NoAST *args);
 NoAST *criarListaArgs(NoAST *arg, NoAST *resto);
 NoAST *criarNoScanf(NoAST *fmt, NoAST *vars);
+NoAST *criarNoBreak(void);
 
 /* ── funções ── */
 /* 'Z' = definição de função

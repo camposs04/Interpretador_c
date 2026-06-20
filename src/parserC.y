@@ -64,7 +64,7 @@ extern char *yytext;
 %left  LT GT LE GE
 %left  PLUS MINUS
 %left  MULT DIV MOD
-%right NOT
+%right NOT UMINUS
 %right INCREMENT DECREMENT
 
 %%
@@ -172,6 +172,9 @@ comando:
 
   | SCANF OPEN_PAREN STRING_LITERAL CLOSE_PAREN PONTO_VIRGULA
       { $$ = criarNoScanf(criarNoString($3), NULL); free($3); }
+
+  | BREAK PONTO_VIRGULA
+      { $$ = criarNoBreak(); }
 ;
 
 for_init:
@@ -287,6 +290,7 @@ expressao:
   | expressao AND   expressao  { $$ = criarNoAnd($1, $3); }
   | expressao OR    expressao  { $$ = criarNoOr($1, $3); }
   | NOT expressao              { $$ = criarNoNot($2); }
+  | MINUS expressao %prec UMINUS { $$ = criarNoNeg($2); }
   | OPEN_PAREN expressao CLOSE_PAREN { $$ = $2; }
   | INT_NUM    { $$ = criarNoInt($1); }
   | FLOAT_NUM  { $$ = criarNoFloat($1); }

@@ -6,6 +6,11 @@
 static int contTemp  = 0;
 static int contLabel = 0;
 
+/* pilha de labels de fim-de-laço, usada para gerar o "goto" do break */
+#define MAX_BREAK_DEPTH 64
+static char pilhaBreak[MAX_BREAK_DEPTH][16];
+static int  profundidadeBreak = 0;
+
 static char *novoTemp(void) {
     char *buf = malloc(16);
     snprintf(buf, 16, "t%d", ++contTemp);
@@ -108,6 +113,13 @@ char *gerarTAC(NoAST *raiz) {
             return NULL;
         }
 
+        /* break */
+        case 'B': {
+            if (profundidadeBreak > 0)
+                printf("goto %s\n", pilhaBreak[profundidadeBreak - 1]);
+            return NULL;
+        }
+
         /* if/else */
         case 'f': {
             char *cond = gerarTAC(raiz->esquerda);
@@ -142,7 +154,11 @@ char *gerarTAC(NoAST *raiz) {
             char *cond = gerarTAC(raiz->esquerda);
             printf("if_false %s goto %s\n", cond, lEnd);
             liberarTemp(cond);
+
+            strncpy(pilhaBreak[profundidadeBreak++], lEnd, 15);
             liberarTemp(gerarTAC(raiz->direita));
+            profundidadeBreak--;
+
             printf("goto %s\n", lStart);
             printf("%s:\n", lEnd);
             return NULL;
@@ -165,7 +181,9 @@ char *gerarTAC(NoAST *raiz) {
                 printf("if_false %s goto %s\n", cond, lEnd);
                 liberarTemp(cond);
             }
+            strncpy(pilhaBreak[profundidadeBreak++], lEnd, 15);
             liberarTemp(gerarTAC(resto->direita));  /* corpo */
+            profundidadeBreak--;
             liberarTemp(gerarTAC(meta->direita));   /* incr */
             printf("goto %s\n", lStart);
             printf("%s:\n", lEnd);
@@ -229,6 +247,15 @@ char *gerarTAC(NoAST *raiz) {
             char *op = gerarTAC(raiz->esquerda);
             char *t  = novoTemp();
             printf("%s = !%s\n", t, op);
+            liberarTemp(op);
+            return t;
+        }
+
+        /* menos unário */
+        case 'u': {
+            char *op = gerarTAC(raiz->esquerda);
+            char *t  = novoTemp();
+            printf("%s = -%s\n", t, op);
             liberarTemp(op);
             return t;
         }
