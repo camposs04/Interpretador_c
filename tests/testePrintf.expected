@@ -1,0 +1,7 @@
+inteiro: 42
+float: 3.140000
+char: A
+bool: true
+dois valores: 42 e 3.14
+sem args
+conta: 42 + 42 = 84

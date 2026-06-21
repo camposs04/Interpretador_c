@@ -1,0 +1,20 @@
+ERROR PARSER
+Line: 19 Column: 14 | error: unexpected token: ';'
+    int erro1 = ;
+                 ^
+
+ERROR PARSER
+Line: 21 Column: 15 | error: unexpected token: '10'
+     erro2 10
+                  ^
+
+ERROR PARSER
+Line: 23 Column: 6 | error: unexpected token: '*'
+    y = 
+         ^
+
+ERROR PARSER
+Line: 25 Column: 9 | error: unexpected token: 'while'
+     
+            ^
+

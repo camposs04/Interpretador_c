@@ -14,6 +14,19 @@ void yyerror(const char *s);
 NoAST *root = NULL;
 int   debug = 0;
 
+/* Aplica 'tipo' a todos os nos 'd' (declaracao) dentro de uma cadeia de
+   ';' produzida por lista_ids, percorrendo a arvore completa em vez de
+   so a borda esquerda — corrige tipo nao propagado em "float a, b, c;". */
+static void aplicarTipoLista(NoAST *no, Tipo tipo) {
+    if (no == NULL) return;
+    if (no->operador == ';') {
+        aplicarTipoLista(no->esquerda, tipo);
+        aplicarTipoLista(no->direita, tipo);
+    } else if (no->operador == 'd') {
+        no->tipo = tipo;
+    }
+}
+
 extern int   linha;
 extern int   coluna;
 extern char  linhaAtual[1024];
@@ -236,19 +249,8 @@ tipo:
 
 declaracao:
     tipo lista_ids PONTO_VIRGULA {
+        aplicarTipoLista($2, $1);
         $$ = $2;
-        NoAST *aux = $$;
-        while (aux != NULL) {
-            if (aux->operador == ';') {
-                NoAST *decl = aux->esquerda;
-                while (decl && decl->operador == ';') decl = decl->esquerda;
-                if (decl && decl->operador == 'd') decl->tipo = $1;
-                aux = aux->direita;
-            } else {
-                aux->tipo = $1;
-                break;
-            }
-        }
     }
   | tipo ID ABRE_COLCHETE INT_NUM FECHA_COLCHETE PONTO_VIRGULA
       { $$ = criarNoDeclVetor($1, $2, $4, NULL); free($2); }

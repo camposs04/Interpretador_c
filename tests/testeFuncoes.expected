@@ -1,0 +1,33 @@
+=== TESTE 1: void ===
+Ola! Testando funcoes...
+=== TESTE 2: int simples ===
+soma(3, 4) = 7
+=== TESTE 3: float ===
+media(4.0, 6.0) = 5
+=== TESTE 4: bool ===
+ehPar(8) = 1
+ehPar(7) = 0
+=== TESTE 5: recursao fatorial ===
+fatorial(0) = 1
+fatorial(1) = 1
+fatorial(5) = 120
+fatorial(10) = 3628800
+=== TESTE 6: recursao fibonacci ===
+fibonacci(0) = 0
+fibonacci(1) = 1
+fibonacci(7) = 13
+fibonacci(10) = 55
+=== TESTE 7: if/else interno ===
+maximo(10, 3) = 10
+maximo(2, 9) = 9
+maximo(5, 5) = 5
+=== TESTE 8: loop interno ===
+somaAte(5) = 15
+somaAte(10) = 55
+=== TESTE 9: funcao chamando funcao ===
+somaQuadrados(3, 4) = 25
+=== TESTE 10: char ===
+primeiraLetra('Z') = Z
+=== TESTE 11: chamada inline em expressao ===
+soma(1,2) + soma(3,4) = 10
+=== TODOS OS TESTES CONCLUIDOS ===
