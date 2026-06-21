@@ -1,166 +1,83 @@
-# Escopo da Linguagem (scope.md)
+# Escopo e Funcionalidades (scope.md)
 
 ## 1. Visão Geral
 
-Este documento define o que a linguagem suporta ao final da sprint 4.
+Este documento define o que a linguagem **suporta no seu estado atual**, refletindo um projeto maduro.
 
-O sistema funciona como:
-
-* Analisador léxico (Flex)
-* Analisador sintático e construtor de AST (Bison)
-* Tabela de símbolos (hash table)
-* Gerador de TAC
-
-Não executa código.
+O sistema é um pipeline completo:
+* **Análise Léxica (Flex)**.
+* **Análise Sintática e AST (Bison)**.
+* **Análise Semântica Robusta** (Checagem de tipos, controle hierárquico de símbolos).
+* **Interpretador em Tempo Real** (Executa nativamente as lógicas lidas).
+* **Geração de TAC** (Transpilação para código intermediário).
 
 ---
 
-## 2. Tipos Suportados
+## 2. Tipos e Estruturas Suportados
 
-* `int`
-* `float`
-* `char`
-* `bool`
+* `int`, `float`, `char`, `bool`
+* Funções com suporte a tipo `void`
+* Variáveis e matrizes unidimensionais (Vetores / Arrays)
 
 ---
 
-## 3. Declarações
+## 3. Escopo Lexical e Semântico
+
+* **Escopo Aninhado**: Suportado totalmente. Blocos `{}` criam um novo espaço de contexto (via pilha de tabelas de símbolos `EscopoRT` e `Escopo` estático). Variáveis declaradas dentro do bloco não vazam, permitindo *shadowing*.
+* **Funções Globais**: Funções possuem escopos isolados onde argumentos entram por cópia no contexto de tempo de execução.
+
+---
+
+## 4. Declarações e Atribuições
+
+Variáveis primitivas e vetores:
 
 ```c
-int x;
 int x, y;
-int x = 10;
-int x = 10, y = 20;
-float f = 3.14;
-char c = 'a';
+int arr[10];
+arr[0] = 5;
+x = arr[0] += 2;
 ```
-
-Cada variável declarada é inserida na tabela de símbolos com seu tipo.
+As atribuições compostas (`+=`, etc) e incrementos unários (`x++`, `--x`) são plenamente funcionais e alteram o estado no interpretador.
 
 ---
 
-## 4. Atribuições
+## 5. Laços e Condicionais
 
-```c
-x = 5;
-x = y + 2;
-```
-
----
-
-## 5. Expressões
-
-### Aritméticas
-
-```c
-x + y
-x - y
-x * y
-x / y
-```
-### 5.1 Otimizações em tempo de compilação
-
-Expressões formadas apenas por literais são avaliadas durante a
-construção da AST (constant folding). O TAC gerado não contém
-instruções desnecessárias para esses casos.
-
-### Relacionais
-
-```c
-x == y
-x != y
-x < y
-x > y
-x <= y
-x >= y
-```
-
----
-
-## 6. Controle de Fluxo
-
-```c
-if (x > 10) {
-    y = 5;
-}
-
-if (x > 10) {
-    y = 5;
-} else {
-    y = 0;
-}
-```
-
----
-
-## 7. Blocos
-
-```c
-{
-    int x;
-    x = 1;
-}
-```
-
----
-
-## 8. Tabela de Símbolos
-
-Introduzida nesta sprint. Armazena todas as variáveis declaradas com nome e tipo, usando uma hash table de 211 buckets com encadeamento separado para colisões.
-
-Validações ativas:
-
-* Rejeita redeclaração de variável com mesmo nome
-* Permite consulta por nome via `searchSymbol`
-
----
-
-## 9. Geração de TAC
-
-A partir desta sprint, ao final do parsing a AST é percorrida e o TAC é impresso. Exemplo:
-
-**Entrada:**
-```c
-int x = 3 + 5;
-if (x > 2) { x = x - 1; }
-```
-
-**Saída:**
-```
-TAC do programa:
-decl int x
-t1 = 3
-t2 = 5
-t3 = t1 + t2
-x = t3
-t4 = x
-t5 = 2
-t6 = t4 > t5
-if_false t6 goto L1
-t7 = x
-t8 = 1
-t9 = t7 - t8
-x = t9
-L1:
-```
-
----
-
-## 10. Não Suportado
-
-* Execução real do programa
-* Escopo aninhado (blocos criam escopo sintático, não semântico)
-* Funções
-* Strings
-* Arrays
+Amplo controle de fluxo implementado:
+* `if` / `if-else`
 * `while` e `for`
+* Interrupção de laços com `break`
 
 ---
 
-## 11. Objetivo
+## 6. Funções e Retornos
 
-Base para:
+As funções podem ser declaradas com múltiplos parâmetros ou `void`.
+O interpretador manipula pilhas de chamada, garantindo que o `return` interrompa o fluxo apenas da função atual, devolvendo o controle.
 
-* Escopo semântico com `entrarEscopo` / `sairEscopo`
-* Verificação de tipos em atribuições e expressões
-* Interpretador com execução real
+```c
+int soma(int a, int b) {
+    return a + b;
+}
+```
+
+---
+
+## 7. Entrada e Saída (I/O)
+
+Injeção das funções nativas da linguagem:
+* **`printf("string literal", args...)`**: Capaz de printar formatações como no C clássico.
+* **`scanf("string", &var)`**: Capta entradas interativamente durante a interpretação via CLI.
+
+---
+
+## 8. Avaliação de Expressões (Constant Folding)
+
+A construção de expressões conta com lógicas robustas que evitam criação de galhos em excesso na AST. Literais matemáticos puros (`3 + 5 * 2`) se fundem na própria análise sintática em um nó de resultado único para ganhos de performance. Expressões envolvendo booleanos (`x && false`) são atalhadas.
+
+---
+
+## 9. Execução Real
+
+O programa de fato **EXECUTA** os scripts enviados (quando não ocorrem erros semânticos na compilação estática). Uma pilha paralela em `interpreter.c` resolve os saltos condicionais e manipula os ponteiros associados às alocações de `tabsym` para simular o _runtime_ em memória.
