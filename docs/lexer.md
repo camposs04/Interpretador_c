@@ -6,16 +6,16 @@ O analisador léxico foi implementado com **Flex**.
 
 Responsabilidades:
 
-* Ler o código fonte
-* Identificar tokens
-* Controlar posição (linha/coluna)
-* Reportar erros léxicos
+* Ler o código fonte.
+* Identificar tokens (palavras-chave, literais, operadores).
+* Controlar posição (linha/coluna) com precisão.
+* Reportar erros léxicos e fornecer o trecho falho para feedback visual.
 
 ---
 
 ## 2. Estrutura Interna
 
-Variáveis globais:
+Variáveis globais mantidas e expostas via `extern` no Parser:
 
 ```c
 int linha = 1;
@@ -23,18 +23,7 @@ int coluna = 1;
 char linhaAtual[1024];
 ```
 
-* `linha`: número da linha atual
-* `coluna`: posição do caractere
-* `linhaAtual`: conteúdo da linha (para exibição de erros)
-
-### Dependências incluídas
-
-```c
-#include "parserC.tab.h"
-#include "tabsym.h"
-```
-
-A inclusão de `tabsym.h` conecta o lexer à tabela de símbolos, permitindo que identificadores reconhecidos sejam consultados durante a análise léxica.
+A inclusão de `tabsym.h` conecta o lexer ao gerenciador semântico, enquanto a própria `linhaAtual` mantém o buffer de contexto da linha para impressão dos erros apontados pelo Lexer ou Parser.
 
 ---
 
@@ -46,11 +35,12 @@ A inclusão de `tabsym.h` conecta o lexer à tabela de símbolos, permitindo que
 |-----------|----------|
 | `if`      | IF       |
 | `else`    | ELSE     |
+| `while`   | WHILE    |
+| `for`     | FOR      |
 | `int`     | INT      |
 | `float`   | FLOAT    |
 | `char`    | CHAR     |
 | `bool`    | BOOL     |
-| `for`     | FOR      |
 | `return`  | RETURN   |
 | `break`   | BREAK    |
 | `void`    | VOID     |
@@ -62,50 +52,45 @@ A inclusão de `tabsym.h` conecta o lexer à tabela de símbolos, permitindo que
 ### 3.2 Identificadores
 
 ```text
-[a-zA-Z][a-zA-Z0-9]*
+[a-zA-Z_][a-zA-Z0-9_]*
 ```
 
-* Devem iniciar com letra
-* Podem conter números
-* Valor enviado ao parser via `yylval.id` com `strdup`
+* Devem iniciar com letra ou sublinhado `_`.
+* Podem conter letras, números e sublinhados.
+* Valor enviado via `yylval.id` alocando dinamicamente com `strdup()`.
 
 ---
 
 ### 3.3 Literais
 
-| Tipo    | Exemplo | Token     |
-|---------|---------|-----------|
-| Inteiro | `10`    | INT_NUM   |
-| Float   | `10.5`  | FLOAT_NUM |
-| Char    | `'a'`   | CHAR_NUM  |
+| Tipo    | Exemplo   | Token          |
+|---------|-----------|----------------|
+| Inteiro | `10`      | INT_NUM        |
+| Float   | `10.5`    | FLOAT_NUM      |
+| Char    | `'a'`     | CHAR_NUM       |
+| Boolean | `true`    | BOOL_VAL       |
+| String  | `"texto"` | STRING_LITERAL |
+
+* As **Strings** são capturadas eliminando as aspas delimitadoras (para serem enviadas nativamente limpas para os nós de `printf`/`scanf`).
 
 ---
 
-### 3.4 Operadores
+### 3.4 Operadores e Delimitadores
 
 #### Aritméticos
-
 `+` `-` `*` `/` `%`
 
-#### Relacionais
+#### Lógicos e Relacionais
+`==` `!=` `<` `>` `<=` `>=` `&&` `||` `!`
 
-`==` `!=` `<` `>` `<=` `>=`
+#### Atribuição e Compostos
+`=` `+=` `-=` `*=` `/=` `%=`
 
-#### Lógicos
-
-`&&` `||` `!`
-
-#### Atribuição simples
-
-`=`
-
-#### Atribuição composta
-
-`+=` `-=` `*=` `/=` `%=`
-
-#### Incremento e decremento
-
+#### Incremento e Decremento
 `++` `--`
+
+#### Delimitadores
+`;` `,` `(` `)` `{` `}` `[` `]` `&` (para uso no scanf)
 
 ---
 
@@ -115,14 +100,14 @@ A inclusão de `tabsym.h` conecta o lexer à tabela de símbolos, permitindo que
 // comentário de linha
 ```
 
-* Ignorados pelo parser
-* Mantidos no buffer `linhaAtual` para exibição em mensagens de erro
+Ignorados sintaticamente, mas o texto consumido é salvo no buffer `linhaAtual` para manter a precisão das colunas.
 
 ---
 
 ## 5. Controle de Posição
 
-Cada token atualiza `coluna` com `coluna += yyleng`. O texto do token é armazenado em `linhaAtual` via macro:
+Cada token atualiza `coluna` dinamicamente: `coluna += yyleng`.
+O macro `ADD_TEXTO()` acumula os caracteres no buffer:
 
 ```c
 #define ADD_TEXTO() \
@@ -133,51 +118,18 @@ Cada token atualiza `coluna` com `coluna += yyleng`. O texto do token é armazen
     }
 ```
 
-Ao encontrar `\n`, `linhaAtual` é reiniciado e `linha` é incrementado.
+Ao encontrar `\n`, as posições são zeradas e `linha` é incrementada.
 
 ---
 
-## 6. Integração com Parser
+## 6. Tratamento de Erros
 
-Valores enviados via `yylval`:
-
-| Campo         | Tipo    | Usado por          |
-|---------------|---------|--------------------|
-| `intValue`    | `int`   | INT_NUM, CHAR_NUM  |
-| `floatValue`  | `float` | FLOAT_NUM          |
-| `id`          | `char*` | ID                 |
-
----
-
-## 7. Integração com Tabela de Símbolos
-
-O lexer inclui `tabsym.h` diretamente. Isso permite que futuras regras léxicas consultem ou pré-registrem símbolos conforme os identificadores são reconhecidos, sem depender de fases posteriores.
-
----
-
-## 8. Tratamento de Erros
-
-Qualquer caractere não reconhecido cai na regra padrão:
-
-```c
-. { erro }
-```
-
-Saída exibida:
+Caracteres inválidos (como `@`, `#`) disparam uma regra coringa `.`:
 
 ```
 ERROR LEXER
 Line: X Column: Y | error: invalid character '?'
-    código fonte
+    codigo fonte com erro
     ^
 ```
-
----
-
-## 9. Fim de Arquivo
-
-```c
-int yywrap() {
-    return 1;
-}
-```
+A coluna é incrementada em seguida, mas o erro chama atenção com a formatação em ponteiro.

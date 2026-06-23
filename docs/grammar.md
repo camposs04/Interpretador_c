@@ -6,25 +6,21 @@ Este módulo define a **gramática da linguagem** utilizando o gerador de parser
 
 O parser é responsável por:
 
-* Validar a estrutura sintática do programa
-* Construir uma **Árvore Sintática Abstrata (AST)**
-* Disparar a geração de TAC ao final do parsing
-* Tratar erros sintáticos com indicação de linha e coluna
+* Validar a estrutura sintática do programa.
+* Construir uma **Árvore Sintática Abstrata (AST)**.
+* Disparar a análise semântica e, se não houver erros, a execução (via Interpretador) e a geração de TAC.
+* Tratar erros sintáticos com indicação precisa de linha e coluna.
 
-A gramática implementa um subconjunto da linguagem C com foco em:
+A gramática implementa um subconjunto da linguagem C com suporte a:
 
-* Declarações de variáveis
-* Atribuições
-* Expressões aritméticas e relacionais
-* Estruturas condicionais (`if` / `if-else`)
-* Blocos `{}`
-
-### Dependências incluídas
-
-```c
-#include "ast.h"
-#include "tac.h"
-```
+* Declarações de variáveis e vetores.
+* Funções (definição, parâmetros e chamada).
+* Atribuições simples, compostas e incremento/decremento.
+* Expressões aritméticas, lógicas e relacionais.
+* Estruturas condicionais (`if` / `if-else`).
+* Laços de repetição (`while`, `for`).
+* Blocos de escopo delimitados por `{}`.
+* Instruções I/O (`printf`, `scanf`).
 
 ---
 
@@ -38,11 +34,13 @@ programa:
 ;
 ```
 
-Ao final do parsing, o TAC é gerado e impresso:
+Ao final do parsing, o interpretador e gerador de TAC são chamados se não houverem erros semânticos:
 
 ```c
-printf("\nTAC do programa:\n");
-gerarTAC(root);
+root = $1;
+analisarSemantica(root);
+// Se sucesso:
+interpretarPrograma(root);
 ```
 
 ---
@@ -56,8 +54,8 @@ lista:
 ;
 ```
 
-* Implementa múltiplas instruções via recursão à esquerda
-* Internamente gera nós de sequência (`;`) na AST
+* Implementa múltiplas instruções e/ou funções.
+* Internamente gera nós de sequência (`;`) na AST.
 
 ---
 
@@ -66,8 +64,10 @@ lista:
 ```c
 elemento:
     comando
+  | def_funcao
 ;
 ```
+Um elemento de escopo global pode ser um comando direto ou a definição de uma função.
 
 ---
 
@@ -77,232 +77,122 @@ elemento:
 bloco:
     ABRE_CHAVES comandos FECHA_CHAVES
 ;
-
-comandos:
-    comandos comando
-    | comando
-;
 ```
 
-* Representam agrupamento de instruções
-* Sem escopo semântico nesta sprint — apenas estrutura sintática
+* Representam agrupamento de instruções.
+* **Escopo Semântico**: Na criação do bloco no parser, `entrarEscopo()` e `sairEscopo()` são chamados, refletindo o escopo hierárquico autêntico da linguagem.
 
 ---
 
-## 6. Comandos
+## 6. Comandos principais
 
-```c
-comando:
-    expressao PONTO_VIRGULA
-    | atribuicao
-    | declaracao
-    | bloco
-    | IF OPEN_PAREN expressao CLOSE_PAREN bloco
-    | IF OPEN_PAREN expressao CLOSE_PAREN bloco ELSE bloco
-    | error PONTO_VIRGULA
-;
-```
+A regra de `comando` expandiu para englobar as novas estruturas:
 
-### Tipos suportados
-
-* Expressões simples
-* Declarações de variáveis
-* Atribuições
-* Blocos `{}`
-* `if` e `if-else`
-* Recuperação de erro via `error PONTO_VIRGULA`
+* `expressao ;`
+* `atribuicao`
+* `declaracao`
+* `bloco`
+* `if`, `if-else`
+* `while`, `for`
+* `printf`, `scanf`
+* `return`, `break`
 
 ---
 
-## 7. Tipos
+## 7. Tipos Suportados
 
 ```c
 tipo:
     INT | FLOAT | CHAR | BOOL
 ;
 ```
-
-Retorna o valor do enum `Tipo` correspondente (`T_INT`, `T_FLOAT`, `T_CHAR`, `T_BOOL`).
+As funções podem retornar esses tipos ou `VOID`.
 
 ---
 
 ## 8. Declarações
 
+Com suporte a vetores (arrays):
+
 ```c
 declaracao:
     tipo lista_ids PONTO_VIRGULA
-;
-
-lista_ids:
-    ID
-    | ID EQUAL expressao
-    | lista_ids VIRGULA ID
-    | lista_ids VIRGULA ID EQUAL expressao
+  | tipo ID '[' INT_NUM ']' PONTO_VIRGULA
+  | tipo ID '[' INT_NUM ']' '=' '{' lista_valores '}' PONTO_VIRGULA
 ;
 ```
 
-### Exemplos válidos
-
+Exemplos:
 ```c
-int x;
-int x, y, z;
-int x = 10;
 int x = 10, y = 20;
-```
-
-### Propagação de tipo
-
-O tipo é aplicado após a criação dos nós via travessia da lista:
-
-```c
-NoAST *aux = $$;
-while (aux != NULL) {
-    if (aux->operador == ';') {
-        if (aux->esquerda) aux->esquerda->tipo = $1;
-        aux = aux->direita;
-    } else {
-        aux->tipo = $1;
-        break;
-    }
-}
+int arr[5];
+int arr[3] = {1, 2, 3};
 ```
 
 ---
 
 ## 9. Atribuição
 
+Com suporte a operadores compostos, incremento e acesso a vetores:
+
 ```c
 atribuicao:
     ID EQUAL expressao PONTO_VIRGULA
-    | ID EQUAL error PONTO_VIRGULA
-;
-```
-
-Exemplo:
-
-```c
-x = 5 + 3;
-```
-
----
-
-## 10. Expressões
-
-```c
-expressao:
-    expressao PLUS expressao
-    | expressao MINUS expressao
-    | expressao MULT expressao
-    | expressao DIV expressao
-    | expressao DEQ expressao
-    | expressao NEQ expressao
-    | expressao LT expressao
-    | expressao GT expressao
-    | expressao LE expressao
-    | expressao GE expressao
-    | OPEN_PAREN expressao CLOSE_PAREN
-    | INT_NUM
-    | FLOAT_NUM
-    | CHAR_NUM
-    | ID
+  | ID ADD_EQUAL expressao PONTO_VIRGULA // +=, -=, *=, /=, %=
+  | INCREMENT ID PONTO_VIRGULA           // ++x
+  | ID INCREMENT PONTO_VIRGULA           // x++
+  | ID '[' expressao ']' EQUAL expressao PONTO_VIRGULA // arr[i] = x
 ;
 ```
 
 ---
 
-## 11. Precedência de Operadores
+## 10. Expressões e Precedência
+
+Expressões expandidas com lógicos e unários.
+
+### Precedência de Operadores
 
 ```c
-%left DEQ NEQ
-%left LT GT LE GE
-%left PLUS MINUS
-%left MULT DIV
+%right EQUAL ADD_EQUAL SUB_EQUAL MULT_EQUAL DIV_EQUAL MOD_EQUAL
+%left  OR
+%left  AND
+%left  DEQ NEQ
+%left  LT GT LE GE
+%left  PLUS MINUS
+%left  MULT DIV MOD
+%right NOT UMINUS
+%right INCREMENT DECREMENT
 ```
 
-| Prioridade | Operadores           |
-|------------|----------------------|
-| Alta       | `*`, `/`             |
-| Média      | `+`, `-`             |
-| Baixa      | `<`, `>`, `<=`, `>=` |
-| Mais baixa | `==`, `!=`           |
-
-Todos associativos à esquerda.
+| Prioridade | Operadores                      |
+|------------|---------------------------------|
+| Alta       | `++`, `--`, `!`, `-` (unário)   |
+| Média-Alta | `*`, `/`, `%`                   |
+| Média      | `+`, `-`                        |
+| Média-Baixa| `<`, `>`, `<=`, `>=`            |
+| Baixa      | `==`, `!=`                      |
+| Lógica     | `&&`, `||`                      |
+| Atribuição | `=`, `+=`, `-=`, etc. (à dir.)  |
 
 ---
 
-## 12. Construção da AST
+## 11. Otimização e Construção da AST
 
-Cada regra cria nós específicos via funções de `ast.h`:
+A AST acomoda nós complexos como `Z` (funções), `V` (vetores), e laços. A função `criarNoOp` aplica **constant folding** antes de alocar um nó binário:
 
-| Estrutura     | Nó  | Função criadora   |
-|---------------|-----|-------------------|
-| Número        | `n` | `criarNoInt`, `criarNoFloat`, `criarNoChar` |
-| Identificador | `i` | `criarNoId`       |
-| Operação      | operador (`+`, `-`, etc.) | `criarNoOp` |
-| Declaração    | `d` | `criarNoDecl`     |
-| Atribuição    | `=` | `criarNoAtrib`    |
-| Sequência     | `;` | `criarNoSeq`      |
-| If            | `f` | `criarNoIf`       |
-
-### 12.1 Otimização na criação de nós
-
-A função `criarNoOp` aplica constant folding antes de alocar um
-nó binário. Quando ambos os filhos são literais, retorna diretamente
-um nó literal com o valor calculado, sem criar o nó de operação.
+* Quando ambos os filhos são literais, retorna diretamente um nó literal.
+* Simplifica identidades (`x + 0`, `x * 1`, etc.).
 
 ---
 
-## 13. Geração de TAC
+## 12. Tratamento de Erros
 
-Ao final do parsing, a função `gerarTAC` (definida em `tac.c`) percorre a AST e emite instruções de três endereços. Exemplo:
-
-**Entrada:**
-```c
-int x = 3 + 5;
-if (x > 2) { x = x - 1; }
-```
-
-**TAC gerado:**
-```
-decl int x
-t1 = 3
-t2 = 5
-t3 = t1 + t2
-x = t3
-t4 = x
-t5 = 2
-t6 = t4 > t5
-if_false t6 goto L1
-t7 = x
-t8 = 1
-t9 = t7 - t8
-x = t9
-L1:
-```
-
----
-
-## 14. Tratamento de Erros
+A recuperação de erros do Bison evita abortar o programa instantaneamente:
 
 ```c
 | error PONTO_VIRGULA { yyerrok; yyclearin; }
 ```
 
-* Permite continuar o parsing após um erro
-* Evita abortar o programa inteiro
-
-### Função de erro
-
-```c
-void yyerror(const char *s)
-```
-
-Exibe linha, coluna, token inesperado e indicador `^` no código fonte.
-
----
-
-## 15. Técnica Utilizada
-
-* Parser **LALR(1)** gerado automaticamente pelo Bison
-* Look-ahead de 1 token
-* Alta eficiência e baixo uso de memória
+Função de erro enriquecida:
+Exibe linha, coluna, token inesperado, e uma representação visual com o cursor `^` apontando no código fonte.
