@@ -1,7 +1,7 @@
 # Interpretador de C
 
 ## Sobre o Projeto
-Este repositório contém o desenvolvimento de um **interpretador da linguagem C**, criado como trabalho em equipe para a disciplina de Compiladores 1 da Universidade de Brasília (UnB).
+Este repositório contém o desenvolvimento de um **interpretador da linguagem C**, do grupo **14** para a disciplina de Compiladores 1 da Universidade de Brasília (UnB).
 
 ## Participantes
 
@@ -38,20 +38,32 @@ InterpretadorC/
 │   ├── scope.md
 │   └── semantic.md
 ├── testes
-│   ├── overview.md
 │   ├── testeAtribuicao.c
-│   ├── testeDeclaracoes.C
+│   ├── testeAtribuicao.expected
+│   ├── testeDeclaracoes.c
+│   ├── testeDeclaracoes.expected
 │   ├── testeErros.c
+│   ├── testeErros.expected
 │   ├── testeEscopo.c
+│   ├── testeEscopo.expected
 │   ├── testeExpressaoInt.c
+│   ├── testeExpressaoInt.expected
 │   ├── testeFuncoes.c
+│   ├── testeFuncoes.expected
 │   ├── testeif.c
+│   ├── testeif.expected
 │   ├── testeMain01.c
+│   ├── testeMain01.expected
 │   ├── testeMainLoop.c
+│   ├── testeMainLoop.expected
 │   ├── testePrintf.c
+│   ├── testePrintf.expected
 │   ├── testeScanf.c
-│   └── testeLacos.c
+│   ├── testeScanf.expected
+│   ├── testeLacos.c
+│   └── testeLacos.expected
 ├── makefile
+├── run_tests.sh
 ├── .gitignore
 └── README.md
 ```
