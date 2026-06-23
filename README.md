@@ -158,7 +158,8 @@ Saída esperada:
 [OK]   testeDeclaracoes
 ...
 ----------------------------------------
-Resultado: 15 ok, 0 falha(s), 0 ignorado(s)
+Resultado: 15 ok, 0 falha(s), 1 ignorado(s)
 ```
+O arquivo de teste testeScanf.c é ignorado pois é necessário que o usuário insira um número.
 
 Em caso de falha, o script mostra o `diff` entre saída esperada e real, e retorna código de saída `1`.
