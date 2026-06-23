@@ -76,7 +76,7 @@ int  posLinha = 0;
 "!"   { coluna += yyleng; return NOT; }
 "&&"  { coluna += yyleng; return AND; }
 "||"  { coluna += yyleng; return OR; }
-"&"  { coluna += yyleng; return AMP; }
+"&"   { coluna += yyleng; return AMP; }
 
 ";"   { ADD_TEXTO(); coluna += yyleng; return PONTO_VIRGULA; }
 "("   { coluna += yyleng; return OPEN_PAREN; }
@@ -125,8 +125,6 @@ int  posLinha = 0;
     coluna += yyleng;
     return CHAR_NUM;
 }
-
-"&"  { coluna += yyleng; return AMP; }
 
 . {
     printf("ERROR LEXER\n");

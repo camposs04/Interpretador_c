@@ -164,6 +164,74 @@ char *gerarTAC(NoAST *raiz) {
             return NULL;
         }
 
+        /* bloco solto */
+        case 'Q':
+            return gerarTAC(raiz->esquerda);
+
+        /* return */
+        case 'K': {
+            if (raiz->esquerda) {
+                char *val = gerarTAC(raiz->esquerda);
+                printf("return %s\n", val);
+                liberarTemp(val);
+            } else {
+                printf("return\n");
+            }
+            return NULL;
+        }
+
+        /* definição de função */
+        case 'Z': {
+            printf("func %s:\n", raiz->nome);
+            liberarTemp(gerarTAC(raiz->esquerda));
+            printf("endfunc %s\n", raiz->nome);
+            return NULL;
+        }
+
+        /* chamada de função */
+        case 'C': {
+            char *pilha[32];
+            int   np = 0;
+            NoAST *cur = raiz->esquerda;
+            while (cur != NULL && np < 32) {
+                if (cur->operador == 'L') {
+                    pilha[np++] = gerarTAC(cur->esquerda);
+                    cur = cur->direita;
+                } else {
+                    pilha[np++] = gerarTAC(cur);
+                    break;
+                }
+            }
+            for (int i = 0; i < np / 2; i++) {
+                char *tmp = pilha[i]; pilha[i] = pilha[np-1-i]; pilha[np-1-i] = tmp;
+            }
+            char *t = novoTemp();
+            printf("%s = call %s", t, raiz->nome);
+            for (int i = 0; i < np; i++) {
+                printf(", %s", pilha[i]);
+                liberarTemp(pilha[i]);
+            }
+            printf("\n");
+            return t;
+        }
+
+        /* scanf */
+        case 'T': {
+            printf("scanf \"%s\"", raiz->esquerda->nome);
+            NoAST *cur = raiz->direita;
+            while (cur != NULL) {
+                if (cur->operador == 'L') {
+                    printf(", %s", cur->esquerda->nome);
+                    cur = cur->direita;
+                } else {
+                    printf(", %s", cur->nome);
+                    break;
+                }
+            }
+            printf("\n");
+            return NULL;
+        }
+
         /* if/else */
         case 'f': {
             char *cond = gerarTAC(raiz->esquerda);

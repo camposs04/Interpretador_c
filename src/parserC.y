@@ -152,7 +152,7 @@ comando:
     expressao PONTO_VIRGULA          { $$ = $1; }
   | atribuicao                       { $$ = $1; }
   | declaracao                       { $$ = $1; }
-  | bloco                            { $$ = $1; }
+  | bloco                            { $$ = criarNoBloco($1); }
   | error PONTO_VIRGULA              { yyerrok; yyclearin; $$ = NULL; }
 
   | IF OPEN_PAREN expressao CLOSE_PAREN bloco

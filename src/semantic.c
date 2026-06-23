@@ -226,6 +226,13 @@ void analisarSemantica(NoAST *raiz) {
             }
             return;
 
+        /* ── bloco solto: precisa de escopo próprio ── */
+        case 'Q':
+            entrarEscopo();
+            analisarSemantica(raiz->esquerda);
+            sairEscopo();
+            return;
+
         case 'P':
             analisarSemantica(raiz->esquerda);
             verificarNaoVoid(raiz->esquerda);

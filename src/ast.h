@@ -26,6 +26,7 @@ NoAST *criarNoPrintfFmt(NoAST *fmt, NoAST *args);
 NoAST *criarListaArgs(NoAST *arg, NoAST *resto);
 NoAST *criarNoScanf(NoAST *fmt, NoAST *vars);
 NoAST *criarNoBreak(void);
+NoAST *criarNoBloco(NoAST *corpo);
 
 /* ── vetores ── */
 /* 'V' = declaração de vetor

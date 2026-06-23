@@ -552,6 +552,15 @@ NoAST *criarNoBreak(void) {
     return novo;
 }
 
+/* ── bloco solto: precisa de escopo próprio na análise semântica/execução ── */
+NoAST *criarNoBloco(NoAST *corpo) {
+    NoAST *novo = calloc(1, sizeof(NoAST));
+    novo->operador = 'Q';
+    novo->tipo     = T_VOID;
+    novo->esquerda = corpo;
+    return novo;
+}
+
 /* ── vetores ── */
 NoAST *criarNoDeclVetor(Tipo tipo, const char *nome, int tamanho, NoAST *valoresIniciais) {
     NoAST *novo = calloc(1, sizeof(NoAST));

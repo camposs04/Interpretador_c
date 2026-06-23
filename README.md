@@ -50,7 +50,7 @@ InterpretadorC/
 │   ├── testeMainLoop.c
 │   ├── testePrintf.c
 │   ├── testeScanf.c
-│   └── testeSimples.c
+│   └── testeLacos.c
 ├── makefile
 ├── .gitignore
 └── README.md

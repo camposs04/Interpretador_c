@@ -551,6 +551,13 @@ static void executar(NoAST *raiz) {
             breakSinal = 1;
             break;
 
+        /* ── bloco solto: precisa de escopo próprio ── */
+        case 'Q':
+            entrarEscopoRT();
+            executar(raiz->esquerda);
+            sairEscopoRT();
+            break;
+
         /* ── scanf ── */
         case 'T': {
             const char *fmt = raiz->esquerda->nome;
