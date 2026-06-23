@@ -77,9 +77,17 @@ make all
 Isso irá gerar o executável `programa` integrando o Léxico (Flex) e o Sintático (Bison).
 
 ### 2. Execução
+Passe o arquivo-fonte `.c` como argumento:
 ```bash
-./programa
+./programa testes/testeMain01.c
 ```
+
+Para ver a tabela de símbolos e o código de três endereços (TAC) gerado, use a flag `-d` ou `--debug` (pode vir antes ou depois do arquivo):
+```bash
+./programa -d testes/testeMain01.c
+./programa testes/testeMain01.c --debug
+```
+
 ### 3. Limpeza de arquivos temporários
 ```bash
 make clean
